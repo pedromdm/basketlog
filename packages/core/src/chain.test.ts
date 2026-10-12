@@ -1,0 +1,425 @@
+import { describe, expect, it } from 'vitest';
+import { activeEvents } from './derive';
+import { setup } from './test-helpers';
+
+describe('made shot', () => {
+  it('logs the shot, resets the shot clock and ends the play when follow-up questions are off', () => {
+    const t = setup({ rules: { askFastBreak: false, askAssist: false } });
+    t.send({ type: 'setClock', clockMs: 480_000, shotClockMs: 9_000 });
+
+    const r = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+
+    expect(r.emittedEvents).toHaveLength(1);
+    expect(r.emittedEvents[0]).toMatchObject({
+      type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true, period: 1, clockMs: 480_000,
+    });
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.shotClockMs).toBe(24_000);
+  });
+});
+
+describe('made shot chain', () => {
+  it('asks fast break, then assist (teammates on court only), and logs each answer', () => {
+    const t = setup();
+
+    const asked = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: true, x: 250, y: 300, distanceFt: 26 });
+    expect(asked.nextPrompt).toMatchObject({ kind: 'fastBreak', title: 'Was it a fast break?' });
+    expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual(['yes', 'no']);
+
+    const assist = t.send({ type: 'answer', optionId: 'yes' });
+    expect(assist.emittedEvents).toEqual([
+      expect.objectContaining({ type: 'shot', playerId: 'h1', points: 3, made: true, fastBreak: true, x: 250, y: 300, distanceFt: 26 }),
+    ]);
+    expect(assist.nextPrompt).toMatchObject({ kind: 'assist', title: 'Assisted by?' });
+    expect(assist.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h2', 'player:h3', 'player:h4', 'player:h5', 'none']);
+
+    const done = t.send({ type: 'answer', optionId: 'player:h2' });
+    expect(done.emittedEvents).toEqual([expect.objectContaining({ type: 'ast', side: 'home', playerId: 'h2' })]);
+    expect(done.nextPrompt).toBeNull();
+    const groups = new Set(t.state.events.map((e) => e.groupId));
+    expect(groups.size).toBe(1);
+  });
+
+  it('keeps the shot unassisted when "No assist" is chosen and records fastBreak=false', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    t.send({ type: 'answer', optionId: 'no' });
+    const done = t.send({ type: 'answer', optionId: 'none' });
+
+    expect(done.emittedEvents).toEqual([]);
+    expect(done.nextPrompt).toBeNull();
+    expect(t.state.events).toEqual([expect.objectContaining({ type: 'shot', fastBreak: false })]);
+  });
+});
+
+describe('missed shot chain', () => {
+  it('asks fast break, blocked by (opponents on court), then rebound with all ten players and team options', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: false });
+    const block = t.send({ type: 'answer', optionId: 'no' });
+
+    expect(block.emittedEvents).toEqual([expect.objectContaining({ type: 'shot', made: false, fastBreak: false })]);
+    expect(block.nextPrompt).toMatchObject({ kind: 'block', title: 'Was it blocked?' });
+    expect(block.nextPrompt?.options.map((o) => o.id)).toEqual([
+      'player:a1', 'player:a2', 'player:a3', 'player:a4', 'player:a5', 'none',
+    ]);
+
+    const rebound = t.send({ type: 'answer', optionId: 'player:a3' });
+    expect(rebound.emittedEvents).toEqual([expect.objectContaining({ type: 'blk', side: 'away', playerId: 'a3' })]);
+    expect(rebound.nextPrompt).toMatchObject({ kind: 'rebound', title: 'Who got the rebound?' });
+    expect(rebound.nextPrompt?.options.map((o) => o.id)).toEqual([
+      'off:player:h1', 'off:player:h2', 'off:player:h3', 'off:player:h4', 'off:player:h5',
+      'def:player:a1', 'def:player:a2', 'def:player:a3', 'def:player:a4', 'def:player:a5',
+      'off:team', 'def:team', 'skip',
+    ]);
+  });
+
+  it('a defensive rebound resets the shot clock to 24 and an offensive one to 14', () => {
+    const def = setup({ rules: { askFastBreak: false } });
+    def.send({ type: 'setClock', clockMs: 300_000, shotClockMs: 3_000 });
+    def.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+    def.send({ type: 'answer', optionId: 'none' });
+    const d = def.send({ type: 'answer', optionId: 'def:player:a2' });
+    expect(d.emittedEvents).toEqual([
+      expect.objectContaining({ type: 'reb', side: 'away', playerId: 'a2', offensive: false }),
+    ]);
+    expect(d.nextPrompt).toBeNull();
+    expect(d.state.shotClockMs).toBe(24_000);
+
+    const off = setup({ rules: { askFastBreak: false } });
+    off.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+    off.send({ type: 'answer', optionId: 'none' });
+    const o = off.send({ type: 'answer', optionId: 'off:team' });
+    expect(o.emittedEvents).toEqual([
+      expect.objectContaining({ type: 'reb', side: 'home', playerId: null, offensive: true }),
+    ]);
+    expect(o.state.shotClockMs).toBe(14_000);
+  });
+
+  it('"Skip" ends the play without a rebound', () => {
+    const t = setup({ rules: { askFastBreak: false } });
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+    t.send({ type: 'answer', optionId: 'none' });
+    const r = t.send({ type: 'answer', optionId: 'skip' });
+    expect(r.emittedEvents).toEqual([]);
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.chain).toBeNull();
+  });
+});
+
+describe('standalone free throw', () => {
+  it('a made free throw is logged as 1 point and ends the play', () => {
+    const t = setup();
+    const r = t.send({ type: 'ft', side: 'home', playerId: 'h2', made: true });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'ft', side: 'home', playerId: 'h2', points: 1, made: true })]);
+    expect(r.nextPrompt).toBeNull();
+  });
+
+  it('a missed free throw goes to the rebound question with the shooter\'s team on offence', () => {
+    const t = setup();
+    const r = t.send({ type: 'ft', side: 'home', playerId: 'h2', made: false });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'ft', made: false })]);
+    expect(r.nextPrompt?.kind).toBe('rebound');
+
+    const reb = t.send({ type: 'answer', optionId: 'def:player:a4' });
+    expect(reb.emittedEvents).toEqual([expect.objectContaining({ type: 'reb', side: 'away', playerId: 'a4', offensive: false })]);
+  });
+});
+
+describe('turnover', () => {
+  it('asks who stole it (opponents on court), logs the steal, and resets the shot clock', () => {
+    const t = setup();
+    t.send({ type: 'setClock', clockMs: 200_000, shotClockMs: 5_000 });
+    const asked = t.send({ type: 'turnover', side: 'home', playerId: 'h3' });
+
+    expect(asked.emittedEvents).toEqual([expect.objectContaining({ type: 'tov', side: 'home', playerId: 'h3' })]);
+    expect(asked.state.shotClockMs).toBe(24_000);
+    expect(asked.nextPrompt).toMatchObject({ kind: 'steal', title: 'Stolen by?' });
+    expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual([
+      'player:a1', 'player:a2', 'player:a3', 'player:a4', 'player:a5', 'none',
+    ]);
+
+    const done = t.send({ type: 'answer', optionId: 'player:a2' });
+    expect(done.emittedEvents).toEqual([expect.objectContaining({ type: 'stl', side: 'away', playerId: 'a2' })]);
+    expect(done.nextPrompt).toBeNull();
+  });
+
+  it('"No steal" just ends the play', () => {
+    const t = setup();
+    t.send({ type: 'turnover', side: 'home', playerId: 'h3' });
+    const done = t.send({ type: 'answer', optionId: 'none' });
+    expect(done.emittedEvents).toEqual([]);
+    expect(done.nextPrompt).toBeNull();
+  });
+});
+
+describe('foul', () => {
+  it('stops the clock, asks who was fouled, how many free throws, then each attempt; a miss on the last goes to rebound', () => {
+    const t = setup();
+    t.send({ type: 'startClock' });
+    const fouled = t.send({ type: 'foul', side: 'away', playerId: 'a2' });
+
+    expect(fouled.emittedEvents).toEqual([expect.objectContaining({ type: 'foul', side: 'away', playerId: 'a2' })]);
+    expect(fouled.state.clockRunning).toBe(false);
+    expect(fouled.nextPrompt).toMatchObject({ kind: 'fouled', title: 'Who was fouled?' });
+    expect(fouled.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h1', 'player:h2', 'player:h3', 'player:h4', 'player:h5', 'none']);
+
+    const count = t.send({ type: 'answer', optionId: 'player:h3' });
+    expect(count.emittedEvents).toEqual([]);
+    expect(count.nextPrompt).toMatchObject({ kind: 'ftCount' });
+    expect(count.nextPrompt?.options.map((o) => o.id)).toEqual(['1', '2', '3', 'none']);
+
+    const first = t.send({ type: 'answer', optionId: '2' });
+    expect(first.nextPrompt).toMatchObject({ kind: 'ft' });
+    expect(first.nextPrompt?.options.map((o) => o.id)).toEqual(['made', 'missed']);
+
+    const second = t.send({ type: 'answer', optionId: 'made' });
+    expect(second.emittedEvents).toEqual([expect.objectContaining({ type: 'ft', side: 'home', playerId: 'h3', points: 1, made: true })]);
+    expect(second.nextPrompt).toMatchObject({ kind: 'ft' });
+
+    const rebound = t.send({ type: 'answer', optionId: 'missed' });
+    expect(rebound.emittedEvents).toEqual([expect.objectContaining({ type: 'ft', made: false })]);
+    expect(rebound.nextPrompt).toMatchObject({ kind: 'rebound' });
+    expect(new Set(t.state.events.map((e) => e.groupId)).size).toBe(1);
+  });
+
+  it('a made last free throw ends the play and "No free throws" ends it straight away', () => {
+    const t = setup();
+    t.send({ type: 'foul', side: 'away', playerId: 'a2' });
+    t.send({ type: 'answer', optionId: 'player:h1' });
+    t.send({ type: 'answer', optionId: '1' });
+    const done = t.send({ type: 'answer', optionId: 'made' });
+    expect(done.nextPrompt).toBeNull();
+
+    t.send({ type: 'foul', side: 'home', playerId: 'h5' });
+    t.send({ type: 'answer', optionId: 'player:a1' });
+    const none = t.send({ type: 'answer', optionId: 'none' });
+    expect(none.emittedEvents).toEqual([]);
+    expect(none.nextPrompt).toBeNull();
+  });
+
+  it('keeps the clock running when the stopClockOnFoul rule is off', () => {
+    const t = setup({ rules: { stopClockOnFoul: false } });
+    t.send({ type: 'startClock' });
+    const r = t.send({ type: 'foul', side: 'away', playerId: 'a2' });
+    expect(r.state.clockRunning).toBe(true);
+  });
+});
+
+describe('substitution', () => {
+  it('offers the bench, logs the sub, and later prompts use the new lineup', () => {
+    const t = setup({ rules: { askFastBreak: false } });
+    const asked = t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    expect(asked.emittedEvents).toEqual([]);
+    expect(asked.nextPrompt).toMatchObject({ kind: 'sub' });
+    expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h6', 'player:h7']);
+
+    const done = t.send({ type: 'answer', optionId: 'player:h6' });
+    expect(done.emittedEvents).toEqual([
+      expect.objectContaining({ type: 'sub', side: 'home', playerId: 'h1', outPlayerId: 'h1', inPlayerId: 'h6' }),
+    ]);
+    expect(done.nextPrompt).toBeNull();
+
+    const assist = t.send({ type: 'shot', side: 'home', playerId: 'h2', points: 2, made: true });
+    expect(assist.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h6', 'player:h3', 'player:h4', 'player:h5', 'none']);
+  });
+
+  it('the player who went out becomes available from the bench', () => {
+    const t = setup();
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    t.send({ type: 'answer', optionId: 'player:h6' });
+    const again = t.send({ type: 'sub', side: 'home', outPlayerId: 'h2' });
+    expect(again.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h1', 'player:h7']);
+  });
+});
+
+describe('timeout', () => {
+  it('logs a team-level timeout and stops the clock', () => {
+    const t = setup();
+    t.send({ type: 'startClock' });
+    const r = t.send({ type: 'timeout', side: 'away' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'timeout', side: 'away', playerId: null })]);
+    expect(r.state.clockRunning).toBe(false);
+    expect(r.nextPrompt).toBeNull();
+  });
+});
+
+describe('one-tap events', () => {
+  it.each([
+    ['oreb', { type: 'reb', offensive: true }, 14_000],
+    ['dreb', { type: 'reb', offensive: false }, 24_000],
+    ['stl', { type: 'stl' }, 24_000],
+    ['ast', { type: 'ast' }, 7_000],
+    ['blk', { type: 'blk' }, 7_000],
+  ] as const)('%s logs one event with its own play and sets the shot clock', (event, expected, shotClock) => {
+    const t = setup();
+    t.send({ type: 'setClock', clockMs: 100_000, shotClockMs: 7_000 });
+    const r = t.send({ type: 'quick', event, side: 'away', playerId: 'a4' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ ...expected, side: 'away', playerId: 'a4' })]);
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.shotClockMs).toBe(shotClock);
+  });
+});
+
+describe('undo', () => {
+  it('voids the whole last play with one void event, then the one before it', () => {
+    const t = setup({ rules: { askFastBreak: false } });
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    t.send({ type: 'answer', optionId: 'player:h2' });
+    t.send({ type: 'quick', event: 'dreb', side: 'away', playerId: 'a1' });
+    const [shot, , dreb] = t.state.events;
+
+    const first = t.send({ type: 'undo' });
+    expect(first.emittedEvents).toEqual([expect.objectContaining({ type: 'void', voidsGroupId: dreb!.groupId })]);
+
+    const second = t.send({ type: 'undo' });
+    expect(second.emittedEvents).toEqual([expect.objectContaining({ type: 'void', voidsGroupId: shot!.groupId })]);
+
+    const none = t.send({ type: 'undo' });
+    expect(none.emittedEvents).toEqual([]);
+  });
+
+  it('undoing a substitution restores the previous lineup', () => {
+    const t = setup();
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    t.send({ type: 'answer', optionId: 'player:h6' });
+    t.send({ type: 'undo' });
+    const r = t.send({ type: 'sub', side: 'home', outPlayerId: 'h2' });
+    expect(r.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h6', 'player:h7']);
+  });
+});
+
+describe('cancel play', () => {
+  it('voids what was already logged for the play in progress and closes the chain', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    t.send({ type: 'answer', optionId: 'no' });
+    const r = t.send({ type: 'cancel' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'void', voidsGroupId: t.state.events[0]!.groupId })]);
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.chain).toBeNull();
+  });
+
+  it('emits nothing when the play has not logged anything yet', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const r = t.send({ type: 'cancel' });
+    expect(r.emittedEvents).toEqual([]);
+    expect(r.state.events).toEqual([]);
+    expect(r.state.chain).toBeNull();
+  });
+});
+
+describe('done and busy', () => {
+  it('"Done" keeps what has been answered so far and closes the play', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: false });
+    t.send({ type: 'answer', optionId: 'yes' });
+    const r = t.send({ type: 'done' });
+    expect(r.emittedEvents).toEqual([]);
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.chain).toBeNull();
+    expect(t.state.events).toEqual([expect.objectContaining({ type: 'shot', made: false, fastBreak: true })]);
+  });
+
+  it('"Done" before the fast-break answer still saves the shot', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const r = t.send({ type: 'done' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'shot', made: true })]);
+    expect(r.state.chain).toBeNull();
+  });
+
+  it('ignores new plays while one is in progress', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const before = t.state;
+    const r = t.send({ type: 'quick', event: 'dreb', side: 'away', playerId: 'a1' });
+    expect(r.emittedEvents).toEqual([]);
+    expect(r.state).toBe(before);
+    expect(r.nextPrompt).toMatchObject({ kind: 'fastBreak' });
+  });
+});
+
+describe('undo during a play', () => {
+  it('cancels the play in progress instead of reaching back to the previous play', () => {
+    const t = setup({ rules: { askFastBreak: false, askAssist: false } });
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    t.send({ type: 'shot', side: 'away', playerId: 'a1', points: 2, made: false });
+    const r = t.send({ type: 'undo' });
+
+    expect(r.state.chain).toBeNull();
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'void', voidsGroupId: t.state.events[1]!.groupId })]);
+  });
+
+  it('with nothing logged yet, it just discards the play in progress', () => {
+    const t = setup();
+    t.send({ type: 'quick', event: 'ast', side: 'home', playerId: 'h2' });
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const r = t.send({ type: 'undo' });
+    expect(r.emittedEvents).toEqual([]);
+    expect(r.state.chain).toBeNull();
+    expect(activeEvents(r.state.events)).toHaveLength(1);
+  });
+});
+
+describe('team-only tracking', () => {
+  it('a team-only side makes shots with no fast-break or assist questions', () => {
+    const t = setup({ tracking: { away: 'team_only' } });
+    const r = t.send({ type: 'shot', side: 'away', playerId: null, points: 3, made: true });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'shot', side: 'away', playerId: null, points: 3, made: true })]);
+    expect(r.nextPrompt).toBeNull();
+  });
+
+  it('a team-only miss skips fast break and goes to block, then rebound with only team options for that side', () => {
+    const t = setup({ tracking: { away: 'team_only' } });
+    const block = t.send({ type: 'shot', side: 'away', playerId: null, points: 2, made: false });
+    expect(block.emittedEvents).toHaveLength(1);
+    expect(block.nextPrompt).toMatchObject({ kind: 'block' });
+    expect(block.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h1', 'player:h2', 'player:h3', 'player:h4', 'player:h5', 'none']);
+
+    const rebound = t.send({ type: 'answer', optionId: 'none' });
+    expect(rebound.nextPrompt?.options.map((o) => o.id)).toEqual([
+      'def:player:h1', 'def:player:h2', 'def:player:h3', 'def:player:h4', 'def:player:h5', 'off:team', 'def:team', 'skip',
+    ]);
+  });
+
+  it('blocks by a team-only side are a single team option', () => {
+    const t = setup({ tracking: { away: 'team_only' }, rules: { askFastBreak: false } });
+    const block = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+    expect(block.nextPrompt?.options.map((o) => o.id)).toEqual(['team', 'none']);
+    const r = t.send({ type: 'answer', optionId: 'team' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'blk', side: 'away', playerId: null })]);
+    expect(r.nextPrompt?.options.map((o) => o.id)).toEqual([
+      'off:player:h1', 'off:player:h2', 'off:player:h3', 'off:player:h4', 'off:player:h5', 'off:team', 'def:team', 'skip',
+    ]);
+  });
+
+  it('a turnover by the team-only side still asks who stole it; against it, no steal is asked', () => {
+    const t = setup({ tracking: { away: 'team_only' } });
+    const asked = t.send({ type: 'turnover', side: 'away', playerId: null });
+    expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h1', 'player:h2', 'player:h3', 'player:h4', 'player:h5', 'none']);
+    t.send({ type: 'answer', optionId: 'none' });
+
+    const against = t.send({ type: 'turnover', side: 'home', playerId: 'h2' });
+    expect(against.emittedEvents).toEqual([expect.objectContaining({ type: 'tov', playerId: 'h2' })]);
+    expect(against.nextPrompt).toBeNull();
+  });
+
+  it('a foul on a team-only side skips "who was fouled" and shoots team-level free throws', () => {
+    const t = setup({ tracking: { away: 'team_only' } });
+    const count = t.send({ type: 'foul', side: 'home', playerId: 'h4' });
+    expect(count.nextPrompt).toMatchObject({ kind: 'ftCount' });
+    const ft = t.send({ type: 'answer', optionId: '1' });
+    expect(ft.nextPrompt).toMatchObject({ kind: 'ft' });
+    const made = t.send({ type: 'answer', optionId: 'made' });
+    expect(made.emittedEvents).toEqual([expect.objectContaining({ type: 'ft', side: 'away', playerId: null, made: true })]);
+  });
+
+  it('ignores substitutions on a team-only side', () => {
+    const t = setup({ tracking: { away: 'team_only' } });
+    const r = t.send({ type: 'sub', side: 'away', outPlayerId: 'a1' });
+    expect(r.nextPrompt).toBeNull();
+    expect(r.state.chain).toBeNull();
+  });
+});

@@ -34,6 +34,13 @@ Planned build order: `core` → `db` → mobile tracker → web. Work one phase 
 - **Shot clock:** reset to 24 on made shot, defensive rebound, turnover or steal; reset to 14 on offensive rebound. Fouls and timeouts stop the game clock.
 - **Players:** jersey number unique per team; `display_name` (short name shown in trackers) may repeat and defaults to last name.
 
+## `packages/core` (Phase 1, implemented)
+
+- `chain.ts`: `initTracker(config)` then `reduce(state, action, env) -> { state, emittedEvents, nextPrompt }`. `env` injects `newId`/`now`/`userId`, so the reducer stays pure. Prompts are answered with `{ type: 'answer', optionId }`; option ids look like `player:h2`, `off:team`, `def:player:a3`, `yes`/`no`, `none`, `skip`, `made`/`missed`, `1`/`2`/`3`.
+- While a play is open (`state.chain`), actions that start a new play are ignored. `done` keeps what was answered, `cancel` and `undo` void the open play. The fast-break answer is applied before the shot is emitted (the shot is held back), so the event log never needs an edit.
+- `derive.ts`: `derive(events, setup)` gives score, per-period team fouls, lineups, box lines, shot dots and play-by-play text. `activeEvents` drops voided groups; it is the one place that interprets `void`.
+- Tests are at the reducer and `derive` seams (`chain.test.ts`, `derive.test.ts`; shared fixtures in `test-helpers.ts`). `classifyShot` (2PT/3PT from a court tap), rules helpers (period labels, timeouts left) and minutes/plus-minus are not built yet.
+
 ## Commands
 
 Phase 0 scaffold is in place (pnpm 10 + Turborepo, `node-linker=hoisted` in `.npmrc` for Metro). Workspace packages are `@basket-log/{web,mobile,core,ui,db,config}`; shared packages export TS source directly (no build step).
