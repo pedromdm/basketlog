@@ -1,0 +1,18 @@
+{
+  "name": "@basket-log/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@basket-log/config": "workspace:*",
+    "eslint": "^9.0.0",
+    "vitest": "^2.1.0"
+  }
+}

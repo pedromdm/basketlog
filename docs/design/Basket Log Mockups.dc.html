@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0;background:#E9E3D8;font-family:'Barlow',sans-serif;color:#111311}button{font-family:inherit}a{color:#1E7A46}a:hover{color:#145532}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}</style>
+</helmet>
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Game setup: new-game wizard (matchup, rules, lineups) and team management</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>New game · tablet · <b style="color:#1E7A46">WORKING</b>. "Start game" resets the live game in the trackers (<a class="dv-oid" href="#1b">1b</a> <a class="dv-oid" href="#2a">2a</a> <a class="dv-oid" href="#3a">3a</a>) with this matchup and these rules.</div>
+<div class="dv-card" style="width:1180px;height:820px;background:#F3EEE5;border-radius:24px;display:grid;grid-template-columns:260px minmax(0,1fr)">
+<div style="background:#111311;color:#FFFFFF;padding:28px 18px;display:flex;flex-direction:column;gap:26px">
+<div style="display:flex;flex-direction:column;gap:6px;padding:0 6px"><div style="font:800 italic 20px/1 'Barlow Condensed';text-transform:uppercase">Basket <span style="color:#4FBF7A">Log</span></div><div style="font:800 italic 36px/1 'Barlow Condensed';text-transform:uppercase">New game</div></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ wz.steps }}" as="st" hint-placeholder-count="4">
+<button onClick="{{ st.go }}" style="display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center;padding:10px;border-radius:12px;border:none;background:{{ st.bg }};color:{{ st.fg }};cursor:pointer;text-align:left">
+<span style="width:34px;height:34px;border-radius:50%;background:{{ st.cbg }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 16px/1 'Barlow Condensed'">{{ st.label }}</span>
+<span style="display:flex;flex-direction:column;gap:3px"><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ st.n }}</span><span style="font:500 12px/1.2 'Barlow';color:{{ st.sub }}">{{ st.d }}</span></span>
+</button>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;padding:0 6px">
+<span style="font:500 12px/1.4 'Barlow';color:#B9B4AA;text-wrap:pretty">Teams and rosters are managed in <a href="#4b" style="color:#4FBF7A">Teams (4b)</a>.</span>
+<button onClick="{{ wz.resetDemo }}" style="height:40px;border-radius:10px;border:1.5px solid #3A3C3A;background:none;color:#FFFFFF;font:600 13px/1 'Barlow';cursor:pointer">Back to demo game</button>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;min-width:0;min-height:0">
+<div style="flex:1;min-height:0;overflow:auto;padding:30px 36px;display:flex;flex-direction:column;gap:20px">
+
+<sc-if value="{{ wz.s1 }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font:800 italic 40px/0.95 'Barlow Condensed';text-transform:uppercase">Matchup</h2><p style="margin:0;font:400 15px/1.4 'Barlow';color:#6B6862">Pick the home and away teams. Picking the same team on both sides swaps them.</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Home</span>
+<sc-for list="{{ wz.home }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;border:1.5px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};cursor:pointer;text-align:left">
+<span style="width:44px;height:44px;border-radius:50%;background:{{ t.color }};color:#FFFFFF;border:2px solid #FFFFFF;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 14px/1 'Barlow Condensed'">{{ t.abbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed';text-transform:uppercase">{{ t.name }}</span><span style="font:500 12px/1 'Barlow';color:{{ t.sub2 }}">{{ t.sub }}</span></span>
+<span style="font:700 20px/1 'Barlow';color:#4FBF7A">{{ t.check }}</span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Away</span>
+<sc-for list="{{ wz.away }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;border:1.5px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};cursor:pointer;text-align:left">
+<span style="width:44px;height:44px;border-radius:50%;background:{{ t.color }};color:#FFFFFF;border:2px solid #FFFFFF;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 14px/1 'Barlow Condensed'">{{ t.abbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed';text-transform:uppercase">{{ t.name }}</span><span style="font:500 12px/1 'Barlow';color:{{ t.sub2 }}">{{ t.sub }}</span></span>
+<span style="font:700 20px/1 'Barlow';color:#4FBF7A">{{ t.check }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:12px">
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Competition</span><input value="{{ wz.comp }}" onChange="{{ wz.setComp }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:500 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Venue</span><input value="{{ wz.venue }}" onChange="{{ wz.setVenue }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:500 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Date &amp; tip-off</span><input value="{{ wz.date }}" onChange="{{ wz.setDate }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:500 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none"></label>
+</div>
+</sc-if>
+
+<sc-if value="{{ wz.s2 }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font:800 italic 40px/0.95 'Barlow Condensed';text-transform:uppercase">Rules</h2><p style="margin:0;font:400 15px/1.4 'Barlow';color:#6B6862">Start from a preset, then adjust anything. Changing a value switches the preset to Custom.</p></div>
+<div style="display:flex;gap:4px;padding:4px;border-radius:12px;background:#E4DCCF;align-self:flex-start">
+<sc-for list="{{ wz.presets }}" as="p" hint-placeholder-count="4"><button onClick="{{ p.go }}" style="height:38px;padding:0 18px;border:none;border-radius:9px;background:{{ p.bg }};color:{{ p.fg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ p.p }}</button></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Game format</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<sc-for list="{{ wz.fields }}" as="f" hint-placeholder-count="8">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 12px/1.2 'Barlow';color:#6B6862">{{ f.label }}</span>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+<button onClick="{{ f.dec }}" style="width:38px;height:38px;border-radius:10px;border:none;background:#EFE9DF;color:#111311;font:700 20px/1 'Barlow';cursor:pointer;opacity:{{ f.decOp }}">−</button>
+<span style="font:800 30px/1 'Barlow Condensed'">{{ f.val }}<span style="font:600 13px/1 'Barlow';color:#6B6862;margin-left:3px">{{ f.unit }}</span></span>
+<button onClick="{{ f.inc }}" style="width:38px;height:38px;border-radius:10px;border:none;background:#EFE9DF;color:#111311;font:700 20px/1 'Barlow';cursor:pointer;opacity:{{ f.incOp }}">+</button>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Timeouts</span>
+<div style="display:flex;gap:4px;padding:4px;border-radius:12px;background:#E4DCCF;align-self:flex-start">
+<sc-for list="{{ wz.toModes }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.go }}" style="height:34px;padding:0 14px;border:none;border-radius:9px;background:{{ m.bg }};color:{{ m.fg }};font:600 13px/1 'Barlow';cursor:pointer">{{ m.m }}</button></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+<sc-for list="{{ wz.toFields }}" as="f" hint-placeholder-count="3">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 12px/1.2 'Barlow';color:#6B6862">{{ f.label }}</span>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+<button onClick="{{ f.dec }}" style="width:32px;height:32px;border-radius:9px;border:none;background:#EFE9DF;color:#111311;font:700 18px/1 'Barlow';cursor:pointer;opacity:{{ f.decOp }}">−</button>
+<span style="font:800 26px/1 'Barlow Condensed'">{{ f.val }}</span>
+<button onClick="{{ f.inc }}" style="width:32px;height:32px;border-radius:9px;border:none;background:#EFE9DF;color:#111311;font:700 18px/1 'Barlow';cursor:pointer;opacity:{{ f.incOp }}">+</button>
+</div>
+</div>
+</sc-for>
+</div>
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding-top:6px">Scorekeeper questions</span>
+<sc-for list="{{ wz.toggles }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.toggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;cursor:pointer;text-align:left;width:100%">
+<span style="font:500 14px/1.3 'Barlow';color:#111311">{{ t.label }}</span>
+<span style="flex:none;position:relative;width:44px;height:24px;border-radius:12px;background:{{ t.bg }}"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;transform:{{ t.kx }};transition:transform .15s"></span></span>
+</button>
+</sc-for>
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding-top:6px">Tracking detail</span>
+<sc-for list="{{ wz.track }}" as="tk" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px">
+<span style="width:28px;height:28px;border-radius:50%;background:{{ tk.color }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 10px/1 'Barlow Condensed'">{{ tk.abbr }}</span>
+<span style="flex:1;font:600 14px/1.2 'Barlow'">{{ tk.name }}</span>
+<div style="display:flex;gap:3px;padding:3px;border-radius:9px;background:#EFE9DF">
+<sc-for list="{{ tk.opts }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.go }}" style="height:30px;padding:0 10px;border:none;border-radius:7px;background:{{ o.bg }};color:{{ o.fg }};font:600 12px/1 'Barlow';cursor:pointer">{{ o.o }}</button></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ wz.s3 }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font:800 italic 40px/0.95 'Barlow Condensed';text-transform:uppercase">Lineups</h2><p style="margin:0;font:400 15px/1.4 'Barlow';color:#6B6862">Tap players to mark the starters. The number of starters follows "Players on court" in Rules.</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<sc-for list="{{ wz.lineups }}" as="lu" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:{{ lu.color }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ lu.abbr }}</span><span style="font:700 20px/1 'Barlow Condensed';text-transform:uppercase">{{ lu.name }}</span><span style="flex:1"></span><span style="padding:6px 10px;border-radius:999px;background:{{ lu.cbg }};color:{{ lu.cfg }};font:700 12px/1 'Barlow'">{{ lu.count }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ lu.players }}" as="p" hint-placeholder-count="12">
+<button onClick="{{ p.toggle }}" style="height:60px;border-radius:12px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:6px;padding:0 10px;cursor:pointer;text-align:left;min-width:0">
+<span style="font:700 24px/1 'Barlow Condensed'">{{ p.num }}</span>
+<span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 13px/1.1 'Barlow';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.first }}</span><span style="font:500 12px/1.1 'Barlow';color:{{ p.sub }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.last }}</span></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ wz.s4 }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font:800 italic 40px/0.95 'Barlow Condensed';text-transform:uppercase">Review</h2><p style="margin:0;font:400 15px/1.4 'Barlow';color:#6B6862">Check everything before tip-off.</p></div>
+<sc-if value="{{ wz.started }}" hint-placeholder-val="{{ false }}">
+<div style="background:#1E7A46;color:#FFFFFF;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+<span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Game started · {{ periodLbl }} {{ clockStr }}</span>
+<span style="font:500 14px/1.4 'Barlow'">The trackers now use this matchup and these rules. Open <a href="#1b" style="color:#FFFFFF;font-weight:700">1b</a>, <a href="#2a" style="color:#FFFFFF;font-weight:700">2a</a> or <a href="#3a" style="color:#FFFFFF;font-weight:700">3a</a> to log events.</span>
+</div>
+</sc-if>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Matchup</span>
+<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="width:48px;height:48px;border-radius:50%;background:{{ wz.colH }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 15px/1 'Barlow Condensed'">{{ wz.abbrH }}</span><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ wz.matchH }}</span><span style="font:600 11px/1 'Barlow';letter-spacing:.08em;color:#6B6862">HOME</span></div>
+<span style="font:700 22px/1 'Barlow Condensed';color:#6B6862">VS</span>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="width:48px;height:48px;border-radius:50%;background:{{ wz.colA }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 15px/1 'Barlow Condensed'">{{ wz.abbrA }}</span><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ wz.matchA }}</span><span style="font:600 11px/1 'Barlow';letter-spacing:.08em;color:#6B6862">AWAY</span></div>
+</div>
+<div style="font:500 13px/1.4 'Barlow';color:#6B6862;text-align:center">{{ wz.comp }} · {{ wz.venue }} · {{ wz.date }}</div>
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding-top:4px">Rules</span>
+<sc-for list="{{ wz.rulesLines }}" as="r" hint-placeholder-count="6"><div style="display:flex;gap:8px;font:500 14px/1.35 'Barlow';color:#111311"><span style="color:#1E7A46">•</span><span>{{ r.t }}</span></div></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ wz.startersList }}" as="sl" hint-placeholder-count="2">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:50%;background:{{ sl.color }}"></span><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ sl.name }}</span><span style="flex:1"></span><span style="font:600 12px/1 'Barlow';color:#6B6862">{{ sl.mode }}</span></div>
+<span style="font:500 13px/1.45 'Barlow';color:#111311">{{ sl.list }}</span>
+</div>
+</sc-for>
+<div style="background:#111311;color:#FFFFFF;border-radius:14px;padding:14px 16px;font:600 14px/1.35 'Barlow'">{{ wz.rec }}</div>
+<sc-if value="{{ wz.hasErr }}" hint-placeholder-val="{{ false }}">
+<div style="background:#FFFFFF;border:1.5px solid #111311;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+<span style="font:700 16px/1 'Barlow Condensed';text-transform:uppercase">Fix before starting</span>
+<sc-for list="{{ wz.errs }}" as="e" hint-placeholder-count="1"><span style="font:500 13px/1.4 'Barlow'">• {{ e.t }}</span></sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+</div>
+<div style="height:76px;flex:none;border-top:1px solid #E4DCCF;background:#FFFFFF;display:flex;align-items:center;gap:12px;padding:0 36px">
+<sc-if value="{{ wz.canBack }}" hint-placeholder-val="{{ false }}"><button onClick="{{ wz.back }}" style="height:48px;padding:0 22px;border-radius:12px;border:1.5px solid #111311;background:none;color:#111311;font:600 15px/1 'Barlow';cursor:pointer">← Back</button></sc-if>
+<span style="flex:1;font:500 14px/1 'Barlow';color:#6B6862">{{ wz.footNote }}</span>
+<sc-if value="{{ wz.showNext }}" hint-placeholder-val="{{ true }}"><button onClick="{{ wz.next }}" style="height:48px;padding:0 28px;border-radius:12px;border:none;background:#111311;color:#FFFFFF;font:700 18px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">NEXT →</button></sc-if>
+<sc-if value="{{ wz.showStart }}" hint-placeholder-val="{{ false }}"><button onClick="{{ wz.start }}" style="height:52px;padding:0 32px;border-radius:12px;border:none;background:{{ wz.startBg }};color:#FFFFFF;font:700 20px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">START GAME</button></sc-if>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Teams · desktop · <b style="color:#1E7A46">WORKING</b>. Create teams and edit rosters. <a class="dv-oid" href="#4a">4a</a> and the trackers use the changes straight away.</div>
+<div class="dv-card" style="width:1280px;background:#F3EEE5">
+<dc-import name="SiteHeader" active="Teams" hint-size="100%,64px"></dc-import>
+<div style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;padding:36px 48px 48px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:10px">
+<h1 style="margin:0 0 8px;font:800 italic 52px/0.9 'Barlow Condensed';text-transform:uppercase">Teams</h1>
+<sc-for list="{{ tm.list }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;border:1.5px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};cursor:pointer;text-align:left">
+<span style="width:40px;height:40px;border-radius:50%;background:{{ t.color }};color:#FFFFFF;border:2px solid #FFFFFF;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 13px/1 'Barlow Condensed'">{{ t.abbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ t.name }}</span><span style="font:500 12px/1 'Barlow';color:{{ t.sub2 }}">{{ t.sub }}</span></span>
+</button>
+</sc-for>
+<button onClick="{{ tm.newTeam }}" style="height:48px;border-radius:14px;border:1.5px dashed #B9B0A1;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">+ New team</button>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:16px;padding:24px 26px;display:flex;flex-direction:column;gap:20px">
+<div style="display:grid;grid-template-columns:64px minmax(0,2fr) minmax(0,0.8fr) minmax(0,1.2fr);gap:14px;align-items:end">
+<span style="width:64px;height:64px;border-radius:50%;background:{{ tm.color }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 20px/1 'Barlow Condensed'">{{ tm.abbr }}</span>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Team name</span><input value="{{ tm.name }}" onChange="{{ tm.setName }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:600 16px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Short code</span><input value="{{ tm.abbr }}" onChange="{{ tm.setAbbr }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:700 18px/1 'Barlow Condensed';letter-spacing:.06em;color:#111311;background:#FFFFFF;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">City</span><input value="{{ tm.city }}" onChange="{{ tm.setCity }}" style="height:44px;border:1.5px solid #E4DCCF;border-radius:10px;padding:0 12px;font:500 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none"></label>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Team colour</span>
+<sc-for list="{{ tm.colors }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.pick }}" style="width:30px;height:30px;border-radius:50%;border:none;background:{{ c.c }};box-shadow:{{ c.ring }};cursor:pointer"></button></sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid #EFE9DF;padding-top:18px"><span style="font:700 24px/1 'Barlow Condensed';text-transform:uppercase">Roster</span><span style="font:500 13px/1 'Barlow';color:#6B6862">{{ tm.count }} · click any field to edit</span></div>
+<div style="display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:76px minmax(0,1fr) minmax(0,1fr) minmax(0,0.9fr) 150px 40px;gap:10px;padding:0 0 8px;font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862"><span>#</span><span>First name</span><span>Last name</span><span style="color:#1E7A46">Short name · in game</span><span>Position</span><span></span></div>
+<sc-for list="{{ tm.rows }}" as="r" hint-placeholder-count="12">
+<div style="display:grid;grid-template-columns:76px minmax(0,1fr) minmax(0,1fr) minmax(0,0.9fr) 150px 40px;gap:10px;align-items:center;padding:5px 0;border-top:1px solid #EFE9DF">
+<input value="{{ r.num }}" onChange="{{ r.setNum }}" style="height:38px;width:100%;box-sizing:border-box;border:1.5px solid {{ r.numBd }};border-radius:9px;padding:0 10px;font:700 18px/1 'Barlow Condensed';color:#111311;background:#FFFFFF;outline:none">
+<input value="{{ r.first }}" onChange="{{ r.setFirst }}" style="height:38px;width:100%;box-sizing:border-box;border:1.5px solid #E4DCCF;border-radius:9px;padding:0 10px;font:500 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none">
+<input value="{{ r.last }}" onChange="{{ r.setLast }}" style="height:38px;width:100%;box-sizing:border-box;border:1.5px solid #E4DCCF;border-radius:9px;padding:0 10px;font:600 15px/1 'Barlow';color:#111311;background:#FFFFFF;outline:none">
+<input value="{{ r.short }}" placeholder="{{ r.shortPh }}" onChange="{{ r.setShort }}" style="height:38px;width:100%;box-sizing:border-box;border:1.5px solid #1E7A46;border-radius:9px;padding:0 10px;font:700 17px/1 'Barlow Condensed';text-transform:uppercase;letter-spacing:.02em;color:#111311;background:#E2EFE6;outline:none">
+<div style="display:flex;gap:4px;padding:3px;border-radius:9px;background:#EFE9DF">
+<sc-for list="{{ r.pos }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.go }}" style="flex:1;height:30px;border:none;border-radius:7px;background:{{ o.bg }};color:{{ o.fg }};font:700 14px/1 'Barlow Condensed';cursor:pointer">{{ o.o }}</button></sc-for>
+</div>
+<button onClick="{{ r.remove }}" style="width:36px;height:36px;border-radius:9px;border:none;background:none;color:#6B6862;font:500 22px/1 'Barlow';cursor:pointer">×</button>
+</div>
+</sc-for>
+<div style="display:grid;grid-template-columns:76px minmax(0,1fr) minmax(0,1fr) minmax(0,0.9fr) 200px;gap:10px;align-items:center;padding:12px 0 0;border-top:1px solid #EFE9DF">
+<input placeholder="#" value="{{ tm.draft.num }}" onChange="{{ tm.setDNum }}" style="height:40px;width:100%;box-sizing:border-box;border:1.5px dashed #B9B0A1;border-radius:9px;padding:0 10px;font:700 18px/1 'Barlow Condensed';color:#111311;background:#F8F5EF;outline:none">
+<input placeholder="First name" value="{{ tm.draft.first }}" onChange="{{ tm.setDFirst }}" style="height:40px;width:100%;box-sizing:border-box;border:1.5px dashed #B9B0A1;border-radius:9px;padding:0 10px;font:500 15px/1 'Barlow';color:#111311;background:#F8F5EF;outline:none">
+<input placeholder="Last name" value="{{ tm.draft.last }}" onChange="{{ tm.setDLast }}" style="height:40px;width:100%;box-sizing:border-box;border:1.5px dashed #B9B0A1;border-radius:9px;padding:0 10px;font:500 15px/1 'Barlow';color:#111311;background:#F8F5EF;outline:none">
+<input placeholder="Short (optional)" value="{{ tm.draft.short }}" onChange="{{ tm.setDShort }}" style="height:40px;width:100%;box-sizing:border-box;border:1.5px dashed #B9B0A1;border-radius:9px;padding:0 10px;font:600 15px/1 'Barlow';color:#111311;background:#F8F5EF;outline:none">
+<button onClick="{{ tm.add }}" style="height:40px;border:none;border-radius:10px;background:{{ tm.addBg }};color:#FFFFFF;font:700 16px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">+ ADD PLAYER</button>
+</div>
+</div>
+<span style="font:500 12px/1.4 'Barlow';color:#6B6862">Changes save automatically. Jersey numbers must be unique (a duplicate gets a dark border). Short names can repeat; they appear next to the number in the trackers and play-by-play. Leave the field empty to use the last name.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">Try next: "season stats per team" · "import a roster from CSV" · "per-game roster: who is dressed/available"</p>
+</section>
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Phone tracker with a court view (court-first version of <a class="dv-oid" href="#1c">1c</a>)</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Phone · <b style="color:#1E7A46">WORKING</b>. Tap the court, confirm or change the shooter in the sheet, choose made or missed, then answer the follow-ups.</div>
+<div class="dv-card" style="position:relative;width:390px;height:844px;border-radius:44px;border:10px solid #111311;background:#F3EEE5;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:600 15px/1 'Barlow';color:#FFFFFF;background:#111311"><span>9:41</span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #FFFFFF"></span></div>
+<div style="background:#111311;color:#FFFFFF;padding:4px 18px 12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:28px;height:28px;border-radius:50%;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ hAbbr }}</span><span style="font:800 32px/1 'Barlow Condensed'">{{ scoreH }}</span></div>
+<button onClick="{{ toggleClock }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:#FFFFFF;cursor:pointer"><span style="font:700 19px/1 'Barlow Condensed'"><span style="color:#4FBF7A">{{ periodLbl }}</span> {{ clockStr }}</span><span style="font:600 10px/1 'Barlow';color:#B9B4AA">SHOT {{ shotClock }} · {{ clockBtn }}</span></button>
+<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font:800 32px/1 'Barlow Condensed';color:#D8D3CA">{{ scoreA }}</span><span style="width:28px;height:28px;border-radius:50%;background:#FFFFFF;color:#111311;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ aAbbr }}</span></div>
+</div>
+<div style="height:6px;flex:none;background-color:#D9A66B;background-image:repeating-linear-gradient(90deg, rgba(110,62,22,.25) 0 1px, rgba(0,0,0,0) 1px 46px)"></div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:12px 14px">
+<div style="display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:11px;background:#E4DCCF;gap:3px">
+<button onClick="{{ pcH }}" style="height:34px;border:none;border-radius:8px;background:{{ pcHBg }};color:{{ pcHFg }};font:700 14px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ hUp }}</button>
+<button onClick="{{ pcA }}" style="height:34px;border:none;border-radius:8px;background:{{ pcABg }};color:{{ pcAFg }};font:700 14px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ aUp }}</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+<sc-for list="{{ pcPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="height:54px;border-radius:11px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:0">
+<span style="font:700 23px/1 'Barlow Condensed'">{{ p.num }}</span><span style="font:600 9.5px/1 'Barlow';color:{{ p.sub }};text-transform:uppercase;letter-spacing:.03em">{{ p.last }}</span>
+</button>
+</sc-for>
+</div>
+<div onClick="{{ courtTapPc }}" style="position:relative;border-radius:12px;overflow:hidden;box-shadow:0 2px 0 #B98A52;cursor:crosshair;flex:none">
+<dc-import name="Court" shots="{{ pcShots }}" hint-size="100%,340px"></dc-import>
+<div style="position:absolute;left:8px;bottom:8px;padding:6px 9px;border-radius:8px;background:rgba(17,19,17,.82);color:#FFFFFF;font:600 11px/1 'Barlow';pointer-events:none">Tap the shot spot · #{{ pcSelNum }} {{ pcSelLast }}</div>
+<sc-if value="{{ pendPc.on }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ pendPc.l }};top:{{ pendPc.t }};width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:3px solid #111311;background:#FFFFFF;box-shadow:0 0 0 5px rgba(255,255,255,.45);pointer-events:none"></div>
+</sc-if>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+<button onClick="{{ pcAct.m1 }}" style="height:42px;border:none;border-radius:10px;background:#145532;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">+1 FT</button>
+<button onClick="{{ pcAct.x1 }}" style="height:42px;border:1.5px solid #CFC5B5;border-radius:10px;background:#FFFFFF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">FT MISS</button>
+<button onClick="{{ pcAct.oreb }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">OREB</button>
+<button onClick="{{ pcAct.dreb }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">DREB</button>
+<button onClick="{{ pcAct.ast }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">AST</button>
+<button onClick="{{ pcAct.stl }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">STL</button>
+<button onClick="{{ pcAct.blk }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">BLK</button>
+<button onClick="{{ pcAct.tov }}" style="height:42px;border:none;border-radius:10px;background:#E4DCCF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">TOV</button>
+<button onClick="{{ pcAct.foul }}" style="height:42px;border:none;border-radius:10px;background:#111311;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">FOUL</button>
+<button onClick="{{ pcAct.sub }}" style="height:42px;border:none;border-radius:10px;background:#111311;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">SUB</button>
+<button onClick="{{ pcAct.timeout }}" style="height:42px;border:none;border-radius:10px;background:#111311;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">T.OUT</button>
+<button onClick="{{ undo }}" style="height:42px;border:1.5px solid #111311;border-radius:10px;background:#FFFFFF;color:#111311;font:700 15px/1 'Barlow Condensed';cursor:pointer">↶ UNDO</button>
+</div>
+<div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#111311;color:#FFFFFF">
+<span style="width:8px;height:8px;border-radius:50%;background:#4FBF7A;flex:none"></span>
+<span style="flex:1;min-width:0;font:500 12.5px/1.25 'Barlow';overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:700">Last</span> · {{ lastSummary }}</span>
+</div>
+</div>
+<sc-if value="{{ pendPc.on }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;background:#111311;color:#FFFFFF;border-radius:24px 24px 0 0;padding:18px 18px 26px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -12px 30px rgba(0,0,0,.3)">
+<div style="width:40px;height:4px;border-radius:2px;background:#3A3C3A;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">#{{ pcSelNum }} {{ pcSelLast }}</span><span style="font:600 14px/1 'Barlow';color:#4FBF7A">{{ pendPc.label }}</span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#B9B4AA">Who took the shot?</span>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+<sc-for list="{{ pcPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="height:60px;border-radius:11px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:0 2px;min-width:0">
+<span style="font:700 23px/1 'Barlow Condensed'">{{ p.num }}</span><span style="font:600 11px/1 'Barlow';color:{{ p.sub }};max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.last }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<button onClick="{{ pendMade }}" style="height:64px;border:none;border-radius:14px;background:#1E7A46;color:#FFFFFF;font:700 22px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MADE</button>
+<button onClick="{{ pendMiss }}" style="height:64px;border:1.5px solid #6B6862;border-radius:14px;background:none;color:#FFFFFF;font:700 22px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MISSED</button>
+</div>
+<button onClick="{{ pendCancel }}" style="height:40px;background:none;border:none;color:#B9B4AA;font:600 14px/1 'Barlow';cursor:pointer">Cancel</button>
+</div>
+</sc-if>
+<sc-if value="{{ pcChain }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;top:150px;background:rgba(17,19,17,.35);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="height:100%;display:flex;flex-direction:column;border-radius:24px 24px 0 0;overflow:hidden">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;background:#111311;color:#FFFFFF;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#4FBF7A"><span>Chained play · step {{ ch.step }}</span><span style="color:#8F8B83">{{ clockStr }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ ch.soFar }}" as="c" hint-placeholder-count="1"><div style="display:flex;gap:8px;align-items:baseline;font:500 13px/1.3 'Barlow';color:#D8D3CA"><span style="color:#4FBF7A">✓</span><span>{{ c.t }}</span></div></sc-for>
+</div>
+<div style="font:700 26px/1.05 'Barlow Condensed';text-transform:uppercase;text-wrap:balance">{{ ch.title }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:auto;align-content:start;min-height:0">
+<sc-for list="{{ ch.opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.go }}" style="min-height:50px;border-radius:12px;border:1.5px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:8px 12px;cursor:pointer;text-align:left;grid-column:{{ o.span }}"><span style="font:700 17px/1 'Barlow Condensed';text-transform:uppercase">{{ o.label }}</span><span style="font:500 11px/1.1 'Barlow';opacity:.8">{{ o.sub }}</span></button>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ chainDone }}" style="height:44px;border:none;border-radius:12px;background:#FFFFFF;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Done — save play</button>
+<button onClick="{{ chainCancel }}" style="height:44px;border:1.5px solid #6B6862;border-radius:12px;background:none;color:#FFFFFF;font:600 14px/1 'Barlow';cursor:pointer">Cancel play</button>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+<p class="dv-next">Try next: "add a one-team mode to <a class="dv-oid" href="#3a">3a</a> like <a class="dv-oid" href="#2a">2a</a>" · "landscape phone layout" · "show zone FG% on the court"</p>
+</section>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">One-team scorekeeper: full detail for Sporting, team-level only for the opponent (based on <a class="dv-oid" href="#1b">1b</a>)</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Tablet · <b style="color:#1E7A46">WORKING</b>. Sporting events get the player, shot spot and follow-ups. After tapping the court you can change the shooter in the popover. Benfica events are one tap with no player or location.</div>
+<div class="dv-card" style="width:1180px;height:820px;background:#F3EEE5;border-radius:24px;display:flex;flex-direction:column">
+<div style="height:88px;flex:none;background:#111311;color:#FFFFFF;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 28px;gap:24px">
+<div style="display:flex;align-items:center;gap:14px">
+<span style="width:46px;height:46px;border-radius:50%;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:700 16px/1 'Barlow Condensed'">{{ hAbbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">{{ hShort }} <span style="font:600 11px/1 'Barlow';letter-spacing:.08em;padding:3px 6px;border-radius:5px;background:#1E7A46;vertical-align:3px">TRACKING</span></span><span style="font:500 12px/1 'Barlow';color:#B9B4AA">{{ tfHStr }}</span></span>
+<span style="margin-left:auto;font:800 56px/1 'Barlow Condensed'">{{ scoreH }}</span>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 24px">
+<span style="font:700 34px/1 'Barlow Condensed';letter-spacing:.02em"><span style="color:#4FBF7A">{{ periodLbl }}</span> {{ clockStr }}</span>
+<span style="display:flex;gap:8px;font:600 12px/1 'Barlow';color:#B9B4AA"><span style="padding:4px 8px;border-radius:6px;background:#242624;color:#FFFFFF">SHOT {{ shotClock }}</span><button onClick="{{ toggleClock }}" style="padding:4px 10px;border-radius:6px;border:none;background:{{ clockBg }};color:#FFFFFF;font:600 12px/1 'Barlow';cursor:pointer">{{ clockBtn }}</button></span>
+</div>
+<div style="display:flex;align-items:center;gap:14px;flex-direction:row-reverse">
+<span style="width:46px;height:46px;border-radius:50%;background:#FFFFFF;color:#111311;display:flex;align-items:center;justify-content:center;font:700 16px/1 'Barlow Condensed'">{{ aAbbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">{{ aShort }}</span><span style="font:500 12px/1 'Barlow';color:#B9B4AA">Team only · {{ tfAStr }}</span></span>
+<span style="margin-right:auto;font:800 56px/1 'Barlow Condensed';color:#D8D3CA">{{ scoreA }}</span>
+</div>
+</div>
+<div style="flex:1;min-height:0;display:flex;gap:20px;padding:20px">
+<div style="width:220px;display:flex;flex-direction:column;gap:8px">
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding:2px 2px 2px">{{ hShort }} on court</div>
+<sc-for list="{{ soPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;padding:12px;border-radius:12px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;text-align:left">
+<span style="font:700 32px/1 'Barlow Condensed'">{{ p.num }}</span>
+<span style="display:flex;flex-direction:column;gap:3px"><span style="font:600 15px/1.1 'Barlow'">{{ p.last }}</span><span style="font:500 12px/1 'Barlow';color:{{ p.sub }}">{{ p.pos }} · {{ p.pts }} PTS</span></span>
+<span style="font:700 11px/1 'Barlow';padding:4px 6px;border-radius:6px;background:{{ p.pfBg }};color:{{ p.pfC }}">{{ p.pf }} PF</span>
+</button>
+</sc-for>
+<button onClick="{{ soAct.sub }}" style="margin-top:auto;height:44px;border-radius:12px;border:1.5px dashed #B9B0A1;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Sub out #{{ soSelNum }} {{ soSelLast }}</button>
+<button onClick="{{ undo }}" style="height:44px;border:1.5px solid #111311;border-radius:12px;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">↶ Undo last play</button>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+<div onClick="{{ courtTapSo }}" style="position:relative;border-radius:14px;overflow:hidden;box-shadow:0 2px 0 #B98A52;cursor:crosshair">
+<dc-import name="Court" shots="{{ soShots }}" hint-size="100%,500px"></dc-import>
+<div style="position:absolute;left:12px;top:12px;padding:6px 10px;border-radius:8px;background:rgba(17,19,17,.8);color:#FFFFFF;font:600 12px/1 'Barlow';pointer-events:none">Tap to log a {{ hShort }} shot</div>
+<sc-if value="{{ pendSo.on }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ pendSo.l }};top:{{ pendSo.t }};width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #111311;background:#FFFFFF;box-shadow:0 0 0 6px rgba(255,255,255,.45);pointer-events:none"></div>
+<div onClick="{{ stop }}" style="position:absolute;left:{{ pendSo.pl }};top:{{ pendSo.pt }};width:290px;box-sizing:border-box;background:#111311;color:#FFFFFF;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:default">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">#{{ soSelNum }} {{ soSelLast }}</span><span style="font:600 12px/1 'Barlow';color:#4FBF7A">{{ pendSo.label }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 10px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#B9B4AA">Who took the shot?</span>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+<sc-for list="{{ soPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="height:50px;border-radius:8px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:0 2px;min-width:0"><span style="font:700 18px/1 'Barlow Condensed'">{{ p.num }}</span><span style="font:600 10px/1 'Barlow';color:{{ p.sub }};max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.last }}</span></button>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ pendMade }}" style="height:48px;border:none;border-radius:10px;background:#1E7A46;color:#FFFFFF;font:700 18px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MADE</button>
+<button onClick="{{ pendMiss }}" style="height:48px;border:1.5px solid #6B6862;border-radius:10px;background:none;color:#FFFFFF;font:700 18px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MISSED</button>
+</div>
+<button onClick="{{ pendCancel }}" style="background:none;border:none;color:#B9B4AA;font:500 12px/1 'Barlow';cursor:pointer;padding:2px">Cancel</button>
+</div>
+</sc-if>
+</div>
+<div style="flex:1;min-height:0;background:#111311;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+<span style="display:flex;flex-direction:column;gap:3px;padding-right:6px;flex:none"><span style="font:700 16px/1 'Barlow Condensed';color:#FFFFFF;text-transform:uppercase">{{ aShort }}</span><span style="font:500 11px/1 'Barlow';color:#8F8B83">team only</span></span>
+<button onClick="{{ oppAct.m2 }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#FFFFFF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">+2</button>
+<button onClick="{{ oppAct.m3 }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#FFFFFF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">+3</button>
+<button onClick="{{ oppAct.m1 }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#FFFFFF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">+1 FT</button>
+<button onClick="{{ oppAct.miss }}" style="flex:1;height:48px;border:1.5px solid #6B6862;border-radius:10px;background:none;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">MISS</button>
+<button onClick="{{ oppAct.ftx }}" style="flex:1;height:48px;border:1.5px solid #6B6862;border-radius:10px;background:none;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">FT MISS</button>
+<button onClick="{{ oppAct.tov }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#3A3C3A;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">TOV</button>
+<button onClick="{{ oppAct.foul }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#3A3C3A;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">FOUL</button>
+<button onClick="{{ oppAct.timeout }}" style="flex:1;height:48px;border:none;border-radius:10px;background:#3A3C3A;color:#FFFFFF;font:700 15px/1 'Barlow Condensed';cursor:pointer">T.OUT</button>
+</div>
+</div>
+<div style="width:300px;display:flex;flex-direction:column;gap:10px;order:{{ padOrder }}">
+<sc-if value="{{ soChain }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;background:#111311;color:#FFFFFF;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#4FBF7A"><span>Chained play · step {{ ch.step }}</span><span style="color:#8F8B83">{{ clockStr }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ ch.soFar }}" as="c" hint-placeholder-count="1"><div style="display:flex;gap:8px;align-items:baseline;font:500 13px/1.3 'Barlow';color:#D8D3CA"><span style="color:#4FBF7A">✓</span><span>{{ c.t }}</span></div></sc-for>
+</div>
+<div style="font:700 26px/1.05 'Barlow Condensed';text-transform:uppercase;text-wrap:balance">{{ ch.title }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:auto;align-content:start;min-height:0">
+<sc-for list="{{ ch.opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.go }}" style="min-height:50px;border-radius:12px;border:1.5px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:8px 12px;cursor:pointer;text-align:left;grid-column:{{ o.span }}"><span style="font:700 17px/1 'Barlow Condensed';text-transform:uppercase">{{ o.label }}</span><span style="font:500 11px/1.1 'Barlow';opacity:.8">{{ o.sub }}</span></button>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ chainDone }}" style="height:44px;border:none;border-radius:12px;background:#FFFFFF;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Done — save play</button>
+<button onClick="{{ chainCancel }}" style="height:44px;border:1.5px solid #6B6862;border-radius:12px;background:none;color:#FFFFFF;font:600 14px/1 'Barlow';cursor:pointer">Cancel play</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ soNoChain }}" hint-placeholder-val="{{ true }}">
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">{{ hShort }} · #{{ soSelNum }} {{ soSelLast }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ soAct.m2 }}" style="height:56px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+2 MADE</button>
+<button onClick="{{ soAct.x2 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">2 MISS</button>
+<button onClick="{{ soAct.m3 }}" style="height:56px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+3 MADE</button>
+<button onClick="{{ soAct.x3 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">3 MISS</button>
+<button onClick="{{ soAct.m1 }}" style="height:56px;border:none;border-radius:12px;background:#145532;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+1 FT</button>
+<button onClick="{{ soAct.x1 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">FT MISS</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<button onClick="{{ soAct.oreb }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">OREB</button>
+<button onClick="{{ soAct.dreb }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">DREB</button>
+<button onClick="{{ soAct.ast }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">AST</button>
+<button onClick="{{ soAct.stl }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">STL</button>
+<button onClick="{{ soAct.blk }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">BLK</button>
+<button onClick="{{ soAct.tov }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">TOV</button>
+<button onClick="{{ soAct.foul }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">FOUL</button>
+<button onClick="{{ soAct.sub }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">SUB</button>
+<button onClick="{{ soAct.timeout }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">TIMEOUT</button>
+</div>
+<div style="margin-top:auto;font:500 12px/1.4 'Barlow';color:#6B6862;text-wrap:pretty">Follow-ups only ask about Sporting players. If a Benfica player was involved, the answer is just "Benfica".</div>
+</sc-if>
+</div>
+</div>
+<div style="height:60px;flex:none;background:#FFFFFF;border-top:1px solid #E4DCCF;display:flex;align-items:center;gap:10px;padding:0 20px;overflow:hidden">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;flex:none">Last plays</span>
+<sc-for list="{{ recent }}" as="e" hint-placeholder-count="4">
+<span style="flex:none;max-width:320px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#F3EEE5;font:500 13px/1 'Barlow';white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="width:8px;height:8px;border-radius:50%;background:{{ e.color }};flex:none"></span><span style="font-weight:700">{{ e.clock }}</span><span style="overflow:hidden;text-overflow:ellipsis">{{ e.summary }}</span></span>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">Try next: "phone version of <a class="dv-oid" href="#2a">2a</a>" · "let me choose which team I'm tracking" · "add a Benfica jersey number field, optional"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Basket Log — game event capture + viewing, first pass</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1z"><div class="dv-olabel"><a class="dv-oid" href="#1z">1z</a>Assumptions &amp; system</div>
+<div class="dv-card" style="width:420px;background:#111311;color:#FFFFFF;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;border-radius:14px">
+<div style="font:800 italic 34px/0.95 'Barlow Condensed';text-transform:uppercase">Basket <span style="color:#4FBF7A">Log</span></div>
+<div style="display:flex;flex-direction:column;gap:10px;font:400 14px/1.45 'Barlow';color:#D8D3CA;text-wrap:pretty">
+<div>• Pro league. All names and data are fictional. Sporting (green) play Benfica (black), so the brand colours double as team colours.</div>
+<div>• Scorekeepers log events on a courtside tablet (<a href="#1b" style="color:#4FBF7A">1b</a>) or a phone (<a href="#1c" style="color:#4FBF7A">1c</a>). Coaches and parents view the results on the other screens.</div>
+<div>• The event model covers shots with location, OREB/DREB, AST, STL, BLK, TOV, fouls and subs. Every event has a clock time, player and team.</div>
+<div>• Visuals: hardwood texture, green paint, Barlow Condensed for scores and Barlow for UI text.</div>
+</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;height:44px;border-radius:8px;background:#1E7A46"></div>
+<div style="flex:1;height:44px;border-radius:8px;background:#4FBF7A"></div>
+<div style="flex:1;height:44px;border-radius:8px;background:#111311;border:1px solid #3A3C3A"></div>
+<div style="flex:1;height:44px;border-radius:8px;background:#6B6862"></div>
+<div style="flex:1;height:44px;border-radius:8px;background:#F3EEE5"></div>
+<div style="flex:1;height:44px;border-radius:8px;background:#D9A66B"></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Games list / schedule · desktop</div>
+<div class="dv-card" style="width:1280px;background:#F3EEE5">
+<dc-import name="SiteHeader" active="Games" hint-size="100%,64px"></dc-import>
+<div style="padding:40px 48px 52px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:600 12px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Sunday · Oct 12, 2026 · Week 6</div>
+<h1 style="margin:0;font:800 italic 64px/0.9 'Barlow Condensed';text-transform:uppercase;color:#111311">Game Night</h1>
+</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ days }}" as="dy" hint-placeholder-count="7">
+<sc-if value="{{ dy.on }}"><div style="width:58px;height:66px;border-radius:12px;background:#111311;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:600 11px/1 'Barlow';letter-spacing:.08em;text-transform:uppercase;color:#4FBF7A">{{ dy.d }}</span><span style="font:700 26px/1 'Barlow Condensed'">{{ dy.n }}</span></div></sc-if>
+<sc-if value="{{ dy.off }}"><div style="width:58px;height:66px;border-radius:12px;background:#FFFFFF;border:1px solid #E4DCCF;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:600 11px/1 'Barlow';letter-spacing:.08em;text-transform:uppercase;color:#6B6862">{{ dy.d }}</span><span style="font:700 26px/1 'Barlow Condensed';color:#111311">{{ dy.n }}</span></div></sc-if>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<span style="padding:9px 16px;border-radius:999px;background:#1E7A46;color:#FFFFFF;font:600 14px/1 'Barlow'">All games · 8</span>
+<span style="padding:9px 16px;border-radius:999px;border:1px solid #D6CDBE;color:#111311;font:500 14px/1 'Barlow'">Live · 2</span>
+<span style="padding:9px 16px;border-radius:999px;border:1px solid #D6CDBE;color:#111311;font:500 14px/1 'Barlow'">Final · 3</span>
+<span style="padding:9px 16px;border-radius:999px;border:1px solid #D6CDBE;color:#111311;font:500 14px/1 'Barlow'">Upcoming · 3</span>
+<span style="flex:1"></span>
+<span style="padding:9px 16px;border-radius:999px;border:1px solid #D6CDBE;color:#111311;font:500 14px/1 'Barlow'">My teams only</span>
+</div>
+<sc-for list="{{ gameGroups }}" as="gg" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase;letter-spacing:.02em">{{ gg.title }}</span><span style="flex:1;height:1px;background:#D6CDBE"></span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+<sc-for list="{{ gg.games }}" as="g" hint-placeholder-count="3">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+<sc-if value="{{ g.live }}"><div style="height:6px;background-color:#D9A66B;background-image:repeating-linear-gradient(90deg, rgba(110,62,22,.25) 0 1px, rgba(0,0,0,0) 1px 46px)"></div></sc-if>
+<div style="padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:center">
+<sc-if value="{{ g.live }}"><span style="display:flex;align-items:center;gap:7px;font:700 12px/1 'Barlow';letter-spacing:.08em;color:#1E7A46"><span style="width:8px;height:8px;border-radius:50%;background:#1E7A46"></span>LIVE · {{ g.status }}</span></sc-if>
+<sc-if value="{{ g.notLive }}"><span style="font:700 12px/1 'Barlow';letter-spacing:.08em;color:#6B6862">{{ g.status }}</span></sc-if>
+<span style="font:500 12px/1 'Barlow';color:#6B6862">{{ g.arena }}</span>
+</div>
+<sc-for list="{{ g.rows }}" as="tm" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:8px 18px">
+<span style="width:40px;height:40px;border-radius:50%;background:{{ tm.color }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 14px/1 'Barlow Condensed';letter-spacing:.04em">{{ tm.abbr }}</span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px/1.1 'Barlow';color:#6B6862">{{ tm.city }} · {{ tm.rec }}</span><span style="font:700 20px/1.05 'Barlow Condensed';text-transform:uppercase">{{ tm.name }}</span></span>
+<span style="font:700 34px/1 'Barlow Condensed';color:{{ tm.sc }}">{{ tm.score }}</span>
+</div>
+</sc-for>
+<div style="margin-top:8px;padding:12px 18px;border-top:1px solid #EFE9DF;display:flex;gap:18px;font:600 13px/1 'Barlow'">
+<span style="color:#1E7A46">{{ g.a1 }}</span><span style="color:#111311">{{ g.a2 }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Live tracker · tablet · <b style="color:#1E7A46">WORKING</b>: tap the court or use the pad. Follow-up questions (assist, block, rebound, steal, free throws) chain automatically.</div>
+<div class="dv-card" style="width:1180px;height:820px;background:#F3EEE5;border-radius:24px;display:flex;flex-direction:column">
+<div style="height:88px;flex:none;background:#111311;color:#FFFFFF;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 28px;gap:24px">
+<div style="display:flex;align-items:center;gap:14px">
+<span style="width:46px;height:46px;border-radius:50%;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:700 16px/1 'Barlow Condensed'">{{ hAbbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">{{ hShort }}</span><span style="font:500 12px/1 'Barlow';color:#B9B4AA">{{ tfHStr }}</span></span>
+<span style="margin-left:auto;font:800 56px/1 'Barlow Condensed'">{{ scoreH }}</span>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 24px">
+<span style="font:700 34px/1 'Barlow Condensed';letter-spacing:.02em"><span style="color:#4FBF7A">{{ periodLbl }}</span> {{ clockStr }}</span>
+<span style="display:flex;gap:8px;font:600 12px/1 'Barlow';color:#B9B4AA"><span style="padding:4px 8px;border-radius:6px;background:#242624;color:#FFFFFF">SHOT {{ shotClock }}</span><button onClick="{{ toggleClock }}" style="padding:4px 10px;border-radius:6px;border:none;background:{{ clockBg }};color:#FFFFFF;font:600 12px/1 'Barlow';cursor:pointer">{{ clockBtn }}</button></span>
+</div>
+<div style="display:flex;align-items:center;gap:14px;flex-direction:row-reverse">
+<span style="width:46px;height:46px;border-radius:50%;background:#FFFFFF;color:#111311;display:flex;align-items:center;justify-content:center;font:700 16px/1 'Barlow Condensed'">{{ aAbbr }}</span>
+<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">{{ aShort }}</span><span style="font:500 12px/1 'Barlow';color:#B9B4AA">{{ tfAStr }}</span></span>
+<span style="margin-right:auto;font:800 56px/1 'Barlow Condensed';color:#D8D3CA">{{ scoreA }}</span>
+</div>
+</div>
+<div style="flex:1;min-height:0;display:flex;gap:20px;padding:20px">
+<div style="width:220px;display:flex;flex-direction:column;gap:8px">
+<div style="display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:12px;background:#E4DCCF;gap:4px">
+<button onClick="{{ trH }}" style="height:38px;border:none;border-radius:9px;background:{{ trHBg }};color:{{ trHFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ hUp }}</button>
+<button onClick="{{ trA }}" style="height:38px;border:none;border-radius:9px;background:{{ trABg }};color:{{ trAFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ aUp }}</button>
+</div>
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding:8px 2px 2px">On court · tap to select</div>
+<sc-for list="{{ trPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;text-align:left">
+<span style="font:700 32px/1 'Barlow Condensed'">{{ p.num }}</span>
+<span style="display:flex;flex-direction:column;gap:3px"><span style="font:600 15px/1.1 'Barlow'">{{ p.last }}</span><span style="font:500 12px/1 'Barlow';color:{{ p.sub }}">{{ p.pos }} · {{ p.pts }} PTS</span></span>
+<span style="font:700 11px/1 'Barlow';padding:4px 6px;border-radius:6px;background:{{ p.pfBg }};color:{{ p.pfC }}">{{ p.pf }} PF</span>
+</button>
+</sc-for>
+<button onClick="{{ trAct.sub }}" style="margin-top:auto;height:44px;border-radius:12px;border:1.5px dashed #B9B0A1;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Sub out #{{ trSelNum }} {{ trSelLast }}</button>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;font:500 13px/1 'Barlow';color:#6B6862"><span>Tap where the shot was taken. 2PT or 3PT is detected from the spot.</span><span style="font-weight:600;color:#111311">{{ trTeamName }} shots: {{ trShotCount }}</span></div>
+<div onClick="{{ courtTap }}" style="position:relative;border-radius:14px;overflow:hidden;box-shadow:0 2px 0 #B98A52;cursor:crosshair">
+<dc-import name="Court" shots="{{ trShots }}" hint-size="100%,500px"></dc-import>
+<sc-if value="{{ pend.on }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ pend.l }};top:{{ pend.t }};width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #111311;background:#FFFFFF;box-shadow:0 0 0 6px rgba(255,255,255,.45);pointer-events:none"></div>
+<div onClick="{{ stop }}" style="position:absolute;left:{{ pend.pl }};top:{{ pend.pt }};width:236px;box-sizing:border-box;background:#111311;color:#FFFFFF;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:default">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">#{{ trSelNum }} {{ trSelLast }}</span><span style="font:600 12px/1 'Barlow';color:#4FBF7A">{{ pend.label }}</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ pendMade }}" style="height:48px;border:none;border-radius:10px;background:#1E7A46;color:#FFFFFF;font:700 18px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MADE</button>
+<button onClick="{{ pendMiss }}" style="height:48px;border:1.5px solid #6B6862;border-radius:10px;background:none;color:#FFFFFF;font:700 18px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">MISSED</button>
+</div>
+<button onClick="{{ pendCancel }}" style="background:none;border:none;color:#B9B4AA;font:500 12px/1 'Barlow';cursor:pointer;padding:2px">Cancel</button>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="width:300px;display:flex;flex-direction:column;gap:10px;order:{{ padOrder }}">
+<sc-if value="{{ trChain }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;background:#111311;color:#FFFFFF;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#4FBF7A"><span>Chained play · step {{ ch.step }}</span><span style="color:#8F8B83">{{ clockStr }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ ch.soFar }}" as="c" hint-placeholder-count="1"><div style="display:flex;gap:8px;align-items:baseline;font:500 13px/1.3 'Barlow';color:#D8D3CA"><span style="color:#4FBF7A">✓</span><span>{{ c.t }}</span></div></sc-for>
+</div>
+<div style="font:700 26px/1.05 'Barlow Condensed';text-transform:uppercase;text-wrap:balance">{{ ch.title }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:auto;align-content:start;min-height:0">
+<sc-for list="{{ ch.opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.go }}" style="min-height:50px;border-radius:12px;border:1.5px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:8px 12px;cursor:pointer;text-align:left;grid-column:{{ o.span }}"><span style="font:700 17px/1 'Barlow Condensed';text-transform:uppercase">{{ o.label }}</span><span style="font:500 11px/1.1 'Barlow';opacity:.8">{{ o.sub }}</span></button>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ chainDone }}" style="height:44px;border:none;border-radius:12px;background:#FFFFFF;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Done — save play</button>
+<button onClick="{{ chainCancel }}" style="height:44px;border:1.5px solid #6B6862;border-radius:12px;background:none;color:#FFFFFF;font:600 14px/1 'Barlow';cursor:pointer">Cancel play</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ trNoChain }}" hint-placeholder-val="{{ true }}">
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Quick log · #{{ trSelNum }} {{ trSelLast }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ trAct.m2 }}" style="height:56px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+2 MADE</button>
+<button onClick="{{ trAct.x2 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">2 MISS</button>
+<button onClick="{{ trAct.m3 }}" style="height:56px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+3 MADE</button>
+<button onClick="{{ trAct.x3 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">3 MISS</button>
+<button onClick="{{ trAct.m1 }}" style="height:56px;border:none;border-radius:12px;background:#145532;color:#FFFFFF;font:700 20px/1 'Barlow Condensed';cursor:pointer">+1 FT</button>
+<button onClick="{{ trAct.x1 }}" style="height:56px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 20px/1 'Barlow Condensed';cursor:pointer">FT MISS</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<button onClick="{{ trAct.oreb }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">OREB</button>
+<button onClick="{{ trAct.dreb }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">DREB</button>
+<button onClick="{{ trAct.ast }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">AST</button>
+<button onClick="{{ trAct.stl }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">STL</button>
+<button onClick="{{ trAct.blk }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">BLK</button>
+<button onClick="{{ trAct.tov }}" style="height:52px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 17px/1 'Barlow Condensed';cursor:pointer">TOV</button>
+<button onClick="{{ trAct.foul }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">FOUL</button>
+<button onClick="{{ trAct.sub }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">SUB</button>
+<button onClick="{{ trAct.timeout }}" style="height:52px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 17px/1 'Barlow Condensed';cursor:pointer">TIMEOUT</button>
+</div>
+<div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ undo }}" style="height:48px;border:1.5px solid #111311;border-radius:12px;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">↶ Undo last play</button>
+<button onClick="{{ toggleClock }}" style="height:48px;border:1.5px solid #CFC5B5;border-radius:12px;background:none;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">{{ clockBtn }}</button>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="height:60px;flex:none;background:#FFFFFF;border-top:1px solid #E4DCCF;display:flex;align-items:center;gap:10px;padding:0 20px;overflow:hidden">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;flex:none">Last plays</span>
+<sc-for list="{{ recent }}" as="e" hint-placeholder-count="4">
+<span style="flex:none;max-width:320px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#F3EEE5;font:500 13px/1 'Barlow';white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="width:8px;height:8px;border-radius:50%;background:{{ e.color }};flex:none"></span><span style="font-weight:700">{{ e.clock }}</span><span style="overflow:hidden;text-overflow:ellipsis">{{ e.summary }}</span></span>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Live tracker · phone · <b style="color:#1E7A46">WORKING</b>, player-first. Shares the same game with <a class="dv-oid" href="#1b">1b</a>.</div>
+<div class="dv-card" style="position:relative;width:390px;height:844px;border-radius:44px;border:10px solid #111311;background:#F3EEE5;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:600 15px/1 'Barlow';color:#FFFFFF;background:#111311"><span>9:41</span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #FFFFFF"></span></div>
+<div style="background:#111311;color:#FFFFFF;padding:6px 18px 16px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:30px;height:30px;border-radius:50%;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ hAbbr }}</span><span style="font:800 36px/1 'Barlow Condensed'">{{ scoreH }}</span></div>
+<button onClick="{{ toggleClock }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:#FFFFFF;cursor:pointer"><span style="font:700 20px/1 'Barlow Condensed'"><span style="color:#4FBF7A">{{ periodLbl }}</span> {{ clockStr }}</span><span style="font:600 11px/1 'Barlow';color:#B9B4AA">SHOT {{ shotClock }} · {{ clockBtn }}</span></button>
+<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font:800 36px/1 'Barlow Condensed';color:#D8D3CA">{{ scoreA }}</span><span style="width:30px;height:30px;border-radius:50%;background:#FFFFFF;color:#111311;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ aAbbr }}</span></div>
+</div>
+<div style="height:6px;flex:none;background-color:#D9A66B;background-image:repeating-linear-gradient(90deg, rgba(110,62,22,.25) 0 1px, rgba(0,0,0,0) 1px 46px)"></div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:16px">
+<div style="display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:12px;background:#E4DCCF;gap:4px">
+<button onClick="{{ phH }}" style="height:38px;border:none;border-radius:9px;background:{{ phHBg }};color:{{ phHFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ hUp }}</button>
+<button onClick="{{ phA }}" style="height:38px;border:none;border-radius:9px;background:{{ phABg }};color:{{ phAFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">{{ aUp }}</button>
+</div>
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">1 · Player</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+<sc-for list="{{ phPlayers }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.pick }}" style="height:64px;border-radius:12px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;padding:0">
+<span style="font:700 26px/1 'Barlow Condensed'">{{ p.num }}</span><span style="font:600 10px/1 'Barlow';color:{{ p.sub }};text-transform:uppercase;letter-spacing:.04em">{{ p.last }}</span>
+</button>
+</sc-for>
+</div>
+<div style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862;padding-top:4px">2 · Event for #{{ phSelNum }} {{ phSelLast }}</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+<button onClick="{{ phAct.m2 }}" style="height:52px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 19px/1 'Barlow Condensed';cursor:pointer">+2</button>
+<button onClick="{{ phAct.m3 }}" style="height:52px;border:none;border-radius:12px;background:#1E7A46;color:#FFFFFF;font:700 19px/1 'Barlow Condensed';cursor:pointer">+3</button>
+<button onClick="{{ phAct.m1 }}" style="height:52px;border:none;border-radius:12px;background:#145532;color:#FFFFFF;font:700 19px/1 'Barlow Condensed';cursor:pointer">+1 FT</button>
+<button onClick="{{ phAct.x2 }}" style="height:52px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">2 MISS</button>
+<button onClick="{{ phAct.x3 }}" style="height:52px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">3 MISS</button>
+<button onClick="{{ phAct.x1 }}" style="height:52px;border:1.5px solid #CFC5B5;border-radius:12px;background:#FFFFFF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">FT MISS</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+<button onClick="{{ phAct.oreb }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">OREB</button>
+<button onClick="{{ phAct.dreb }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">DREB</button>
+<button onClick="{{ phAct.ast }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">AST</button>
+<button onClick="{{ phAct.stl }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">STL</button>
+<button onClick="{{ phAct.blk }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">BLK</button>
+<button onClick="{{ phAct.tov }}" style="height:48px;border:none;border-radius:12px;background:#E4DCCF;color:#111311;font:700 16px/1 'Barlow Condensed';cursor:pointer">TOV</button>
+<button onClick="{{ phAct.foul }}" style="height:48px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 16px/1 'Barlow Condensed';cursor:pointer">FOUL</button>
+<button onClick="{{ phAct.sub }}" style="height:48px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 16px/1 'Barlow Condensed';cursor:pointer">SUB</button>
+<button onClick="{{ phAct.timeout }}" style="height:48px;border:none;border-radius:12px;background:#111311;color:#FFFFFF;font:700 16px/1 'Barlow Condensed';cursor:pointer">TIMEOUT</button>
+</div>
+<div style="font:500 12px/1.35 'Barlow';color:#6B6862;text-wrap:pretty">After the event, the app asks who assisted, rebounded, stole the ball or took free throws.</div>
+<div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#111311;color:#FFFFFF">
+<span style="width:8px;height:8px;border-radius:50%;background:#4FBF7A;flex:none"></span>
+<span style="flex:1;min-width:0;font:500 13px/1.25 'Barlow';overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:700">Last</span> · {{ lastSummary }}</span>
+<button onClick="{{ undo }}" style="background:none;border:none;font:700 13px/1 'Barlow';color:#4FBF7A;cursor:pointer">UNDO</button>
+</div>
+</div>
+<sc-if value="{{ phChain }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;top:150px;background:rgba(17,19,17,.35);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="height:100%;display:flex;flex-direction:column;border-radius:24px 24px 0 0;overflow:hidden">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;background:#111311;color:#FFFFFF;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#4FBF7A"><span>Chained play · step {{ ch.step }}</span><span style="color:#8F8B83">{{ clockStr }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ ch.soFar }}" as="c" hint-placeholder-count="1"><div style="display:flex;gap:8px;align-items:baseline;font:500 13px/1.3 'Barlow';color:#D8D3CA"><span style="color:#4FBF7A">✓</span><span>{{ c.t }}</span></div></sc-for>
+</div>
+<div style="font:700 26px/1.05 'Barlow Condensed';text-transform:uppercase;text-wrap:balance">{{ ch.title }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:auto;align-content:start;min-height:0">
+<sc-for list="{{ ch.opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.go }}" style="min-height:50px;border-radius:12px;border:1.5px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:8px 12px;cursor:pointer;text-align:left;grid-column:{{ o.span }}"><span style="font:700 17px/1 'Barlow Condensed';text-transform:uppercase">{{ o.label }}</span><span style="font:500 11px/1.1 'Barlow';opacity:.8">{{ o.sub }}</span></button>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<button onClick="{{ chainDone }}" style="height:44px;border:none;border-radius:12px;background:#FFFFFF;color:#111311;font:600 14px/1 'Barlow';cursor:pointer">Done — save play</button>
+<button onClick="{{ chainCancel }}" style="height:44px;border:1.5px solid #6B6862;border-radius:12px;background:none;color:#FFFFFF;font:600 14px/1 'Barlow';cursor:pointer">Cancel play</button>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Play-by-play feed · phone</div>
+<div class="dv-card" style="width:390px;height:844px;border-radius:44px;border:10px solid #111311;background:#F3EEE5;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:600 15px/1 'Barlow';color:#FFFFFF;background:#111311"><span>9:41</span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #FFFFFF"></span></div>
+<div style="background:#111311;color:#FFFFFF;padding:4px 20px 18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;font:600 13px/1 'Barlow';color:#B9B4AA"><span>‹ Games</span><span style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#1E7A46;color:#FFFFFF;font-weight:700;letter-spacing:.06em"><span style="width:6px;height:6px;border-radius:50%;background:#FFFFFF"></span>LIVE · {{ periodLbl }} {{ clockStr }}</span><span>Share</span></div>
+<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="width:40px;height:40px;border-radius:50%;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:700 13px/1 'Barlow Condensed'">SCP</span><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">Sporting</span></div>
+<div style="font:800 54px/1 'Barlow Condensed';display:flex;gap:10px"><span>{{ scoreH }}</span><span style="color:#5A5C5A">–</span><span style="color:#B9B4AA">{{ scoreA }}</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><span style="width:40px;height:40px;border-radius:50%;background:#FFFFFF;color:#111311;display:flex;align-items:center;justify-content:center;font:700 13px/1 'Barlow Condensed'">SLB</span><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">Benfica</span></div>
+</div>
+</div>
+<div style="height:6px;flex:none;background-color:#D9A66B;background-image:repeating-linear-gradient(90deg, rgba(110,62,22,.25) 0 1px, rgba(0,0,0,0) 1px 46px)"></div>
+<div style="display:flex;background:#FFFFFF;border-bottom:1px solid #E4DCCF;flex:none">
+<span style="flex:1;text-align:center;padding:14px 0 12px;font:700 14px/1 'Barlow';color:#111311;border-bottom:3px solid #1E7A46">Plays</span>
+<span style="flex:1;text-align:center;padding:14px 0 12px;font:500 14px/1 'Barlow';color:#6B6862">Box</span>
+<span style="flex:1;text-align:center;padding:14px 0 12px;font:500 14px/1 'Barlow';color:#6B6862">Shots</span>
+<span style="flex:1;text-align:center;padding:14px 0 12px;font:500 14px/1 'Barlow';color:#6B6862">Leaders</span>
+</div>
+<div style="display:flex;gap:6px;padding:12px 16px;flex:none">
+<span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q1</span>
+<span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q2</span>
+<span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q3</span>
+<span style="padding:7px 12px;border-radius:999px;background:#111311;color:#FFFFFF;font:600 13px/1 'Barlow'">Q4</span>
+<span style="flex:1"></span>
+<span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Scoring only</span>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;background:#FFFFFF;border-top:1px solid #E4DCCF">
+<sc-for list="{{ pbp }}" as="e" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:44px 4px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #EFE9DF">
+<span style="font:700 15px/1 'Barlow Condensed';color:#6B6862">{{ e.clock }}</span>
+<span style="align-self:stretch;border-radius:2px;background:{{ e.color }}"></span>
+<span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font:{{ e.tw }} 14px/1.2 'Barlow';color:#111311">{{ e.title }}</span><span style="font:500 12px/1.2 'Barlow';color:#6B6862">{{ e.abbr }} · {{ e.tag }}{{ e.detailSep }}{{ e.detail }}</span></span>
+<span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="font:{{ e.sw }} 16px/1 'Barlow Condensed';color:{{ e.sc }}">{{ e.score }}</span><sc-if value="{{ e.scoring }}"><span style="font:700 11px/1 'Barlow';padding:3px 6px;border-radius:5px;background:#E2EFE6;color:#145532">{{ e.pts }}</span></sc-if></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Box score · desktop</div>
+<div class="dv-card" style="width:1280px;background:#F3EEE5">
+<dc-import name="SiteHeader" active="Games" hint-size="100%,64px"></dc-import>
+<div style="background-color:#D9A66B;background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 21px, rgba(110,62,22,.22) 21px 22px), repeating-linear-gradient(90deg, rgba(255,240,220,.08) 0 70px, rgba(120,70,30,.08) 70px 150px, rgba(0,0,0,0) 150px 230px);padding:28px 48px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:32px">
+<div style="display:flex;align-items:center;gap:16px">
+<span style="width:60px;height:60px;border-radius:50%;background:#1E7A46;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 20px/1 'Barlow Condensed';border:3px solid #FFFFFF">SCP</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font:600 13px/1 'Barlow';color:#3B2610">Lisboa · 10–3</span><span style="font:800 30px/1 'Barlow Condensed';text-transform:uppercase;color:#111311">Sporting</span></span>
+<span style="margin-left:auto;font:800 76px/1 'Barlow Condensed';color:#111311">112</span>
+</div>
+<div style="background:#FFFFFF;border-radius:12px;padding:12px 16px;display:grid;grid-template-columns:48px repeat(4,34px) 44px;row-gap:8px;font:600 14px/1 'Barlow';text-align:center;box-shadow:0 2px 0 #B98A52">
+<span style="text-align:left;color:#1E7A46;font-weight:700">FINAL</span><span style="color:#6B6862">1</span><span style="color:#6B6862">2</span><span style="color:#6B6862">3</span><span style="color:#6B6862">4</span><span style="color:#6B6862">T</span>
+<span style="text-align:left">SCP</span><span>28</span><span>31</span><span>24</span><span>29</span><span style="font-weight:800">112</span>
+<span style="text-align:left">SLB</span><span>30</span><span>25</span><span>27</span><span>24</span><span style="font-weight:800">106</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex-direction:row-reverse">
+<span style="width:60px;height:60px;border-radius:50%;background:#111311;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 20px/1 'Barlow Condensed';border:3px solid #FFFFFF">SLB</span>
+<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span style="font:600 13px/1 'Barlow';color:#3B2610">Lisboa · 7–6</span><span style="font:800 30px/1 'Barlow Condensed';text-transform:uppercase;color:#111311">Benfica</span></span>
+<span style="margin-right:auto;font:800 76px/1 'Barlow Condensed';color:#5A3A1C">106</span>
+</div>
+</div>
+<div style="display:flex;gap:28px;padding:0 48px;background:#FFFFFF;border-bottom:1px solid #E4DCCF">
+<span style="padding:16px 0 13px;font:700 15px/1 'Barlow';border-bottom:3px solid #1E7A46">Box Score</span>
+<span style="padding:16px 0 13px;font:500 15px/1 'Barlow';color:#6B6862">Play-by-Play</span>
+<span style="padding:16px 0 13px;font:500 15px/1 'Barlow';color:#6B6862">Shot Chart</span>
+<span style="padding:16px 0 13px;font:500 15px/1 'Barlow';color:#6B6862">Recap</span>
+<span style="flex:1"></span>
+<span style="padding:16px 0 13px;font:600 14px/1 'Barlow';color:#1E7A46">Export CSV</span>
+</div>
+<div style="padding:28px 48px 48px;display:flex;flex-direction:column;gap:24px">
+<sc-for list="{{ boxTeams }}" as="bt" hint-placeholder-count="2">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:{{ bt.color }};color:#FFFFFF">
+<span style="font:800 22px/1 'Barlow Condensed';text-transform:uppercase;letter-spacing:.02em">{{ bt.full }}</span>
+<span style="flex:1"></span>
+<span style="font:600 13px/1 'Barlow';opacity:.85">FG {{ bt.fgp }} · 3PT {{ bt.tpp }} · FT {{ bt.ftp }}</span>
+</div>
+<div style="display:grid;grid-template-columns:minmax(240px,2.6fr) repeat(12,minmax(0,1fr));padding:10px 20px;font:600 12px/1 'Barlow';letter-spacing:.06em;color:#6B6862;border-bottom:1px solid #EFE9DF;text-align:right">
+<span style="text-align:left">STARTERS</span><span>MIN</span><span>PTS</span><span>FG</span><span>3PT</span><span>FT</span><span>REB</span><span>AST</span><span>STL</span><span>BLK</span><span>TO</span><span>PF</span><span>+/−</span>
+</div>
+<sc-for list="{{ bt.starters }}" as="r" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:minmax(240px,2.6fr) repeat(12,minmax(0,1fr));padding:11px 20px;font:500 15px/1 'Barlow';border-bottom:1px solid #EFE9DF;text-align:right;align-items:center">
+<span style="text-align:left;display:flex;gap:10px;align-items:baseline"><span style="font:700 15px/1 'Barlow Condensed';color:#6B6862;width:22px">{{ r.num }}</span><span style="font-weight:600">{{ r.name }}</span><span style="font-size:12px;color:#6B6862">{{ r.pos }}</span></span>
+<span>{{ r.min }}</span><span style="font:700 18px/1 'Barlow Condensed'">{{ r.pts }}</span><span>{{ r.fg }}</span><span>{{ r.tp }}</span><span>{{ r.ft }}</span><span>{{ r.reb }}</span><span>{{ r.ast }}</span><span>{{ r.stl }}</span><span>{{ r.blk }}</span><span>{{ r.to }}</span><span>{{ r.pf }}</span><span style="color:{{ r.pmC }};font-weight:600">{{ r.pm }}</span>
+</div>
+</sc-for>
+<div style="padding:10px 20px;font:600 12px/1 'Barlow';letter-spacing:.06em;color:#6B6862;background:#F8F5EF;border-bottom:1px solid #EFE9DF">BENCH</div>
+<sc-for list="{{ bt.bench }}" as="r" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:minmax(240px,2.6fr) repeat(12,minmax(0,1fr));padding:11px 20px;font:500 15px/1 'Barlow';border-bottom:1px solid #EFE9DF;text-align:right;align-items:center">
+<span style="text-align:left;display:flex;gap:10px;align-items:baseline"><span style="font:700 15px/1 'Barlow Condensed';color:#6B6862;width:22px">{{ r.num }}</span><span style="font-weight:600">{{ r.name }}</span><span style="font-size:12px;color:#6B6862">{{ r.pos }}</span></span>
+<span>{{ r.min }}</span><span style="font:700 18px/1 'Barlow Condensed'">{{ r.pts }}</span><span>{{ r.fg }}</span><span>{{ r.tp }}</span><span>{{ r.ft }}</span><span>{{ r.reb }}</span><span>{{ r.ast }}</span><span>{{ r.stl }}</span><span>{{ r.blk }}</span><span>{{ r.to }}</span><span>{{ r.pf }}</span><span style="color:{{ r.pmC }};font-weight:600">{{ r.pm }}</span>
+</div>
+</sc-for>
+<div style="display:grid;grid-template-columns:minmax(240px,2.6fr) repeat(12,minmax(0,1fr));padding:13px 20px;font:700 15px/1 'Barlow';text-align:right;background:#F8F5EF">
+<span style="text-align:left;letter-spacing:.06em">TOTALS</span><span>{{ bt.t.min }}</span><span style="font:800 18px/1 'Barlow Condensed'">{{ bt.t.pts }}</span><span>{{ bt.t.fg }}</span><span>{{ bt.t.tp }}</span><span>{{ bt.t.ft }}</span><span>{{ bt.t.reb }}</span><span>{{ bt.t.ast }}</span><span>{{ bt.t.stl }}</span><span>{{ bt.t.blk }}</span><span>{{ bt.t.to }}</span><span>{{ bt.t.pf }}</span><span></span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Shot chart · desktop (team toggle works; filter with the Shots tweak)</div>
+<div class="dv-card" style="width:1280px;background:#F3EEE5">
+<dc-import name="SiteHeader" active="Games" hint-size="100%,64px"></dc-import>
+<div style="display:flex;align-items:center;gap:18px;padding:16px 48px;background:#FFFFFF;border-bottom:1px solid #E4DCCF">
+<span style="font:700 13px/1 'Barlow';color:#1E7A46;letter-spacing:.06em">FINAL</span>
+<span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Sporting 112 <span style="color:#6B6862">·</span> Benfica 106</span>
+<span style="font:500 13px/1 'Barlow';color:#6B6862">Oct 12 · Pavilhão João Rocha</span>
+<span style="flex:1"></span>
+<span style="font:500 15px/1 'Barlow';color:#6B6862">Box Score</span><span style="font:500 15px/1 'Barlow';color:#6B6862">Play-by-Play</span>
+<span style="font:700 15px/1 'Barlow';padding-bottom:4px;border-bottom:3px solid #1E7A46">Shot Chart</span>
+<span style="font:500 15px/1 'Barlow';color:#6B6862">Recap</span>
+</div>
+<div style="display:grid;grid-template-columns:260px minmax(0,1fr) 300px;gap:28px;padding:28px 48px 48px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:12px;background:#E4DCCF;gap:4px">
+<button onClick="{{ scH }}" style="height:38px;border:none;border-radius:9px;background:{{ scHBg }};color:{{ scHFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">SPORTING</button>
+<button onClick="{{ scA }}" style="height:38px;border:none;border-radius:9px;background:{{ scABg }};color:{{ scAFg }};font:700 15px/1 'Barlow Condensed';letter-spacing:.04em;cursor:pointer">BENFICA</button>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;padding:6px 0">
+<sc-for list="{{ scPlayers }}" as="p" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:18px 26px 1fr auto;gap:8px;align-items:center;padding:8px 14px;font:500 14px/1 'Barlow'">
+<span style="width:16px;height:16px;border-radius:4px;background:{{ scColor }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:11px">✓</span>
+<span style="font:700 14px/1 'Barlow Condensed';color:#6B6862">{{ p.num }}</span>
+<span style="font-weight:600">{{ p.short }}</span>
+<span style="color:#6B6862">{{ p.fg }}</span>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.1em;text-transform:uppercase;color:#6B6862">Quarter</span>
+<div style="display:flex;gap:6px"><span style="padding:7px 12px;border-radius:999px;background:#111311;color:#FFFFFF;font:600 13px/1 'Barlow'">All</span><span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q1</span><span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q2</span><span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q3</span><span style="padding:7px 12px;border-radius:999px;border:1px solid #D6CDBE;font:600 13px/1 'Barlow'">Q4</span></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="border-radius:16px;overflow:hidden;box-shadow:0 3px 0 #B98A52">
+<dc-import name="Court" shots="{{ scShots }}" hint-size="100%,560px"></dc-import>
+</div>
+<div style="display:flex;gap:22px;align-items:center;font:500 13px/1 'Barlow';color:#6B6862">
+<span style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:{{ scColor }}"></span>Made</span>
+<span style="display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;border:2.5px solid {{ scColor }}"></span>Missed</span>
+<span style="flex:1"></span>
+<span style="font:700 16px/1 'Barlow Condensed';color:#111311">{{ scSummary }}</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">By zone</span>
+<sc-for list="{{ scZones }}" as="z" hint-placeholder-count="4">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 15px/1 'Barlow'">{{ z.z }}</span><span style="font:800 28px/1 'Barlow Condensed'">{{ z.pct }}</span></div>
+<div style="height:8px;border-radius:4px;background:#EFE9DF;overflow:hidden"><div style="height:100%;width:{{ z.w }};background:{{ scColor }};border-radius:4px"></div></div>
+<div style="display:flex;justify-content:space-between;font:500 12px/1 'Barlow';color:#6B6862"><span>{{ z.m }}/{{ z.a }} made</span><span>{{ z.share }}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Game summary / recap · desktop</div>
+<div class="dv-card" style="width:1280px;background:#F3EEE5">
+<dc-import name="SiteHeader" active="Games" hint-size="100%,64px"></dc-import>
+<div style="background-color:#D9A66B;background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 21px, rgba(110,62,22,.22) 21px 22px), repeating-linear-gradient(90deg, rgba(255,240,220,.08) 0 70px, rgba(120,70,30,.08) 70px 150px, rgba(0,0,0,0) 150px 230px);padding:44px 48px 40px;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:32px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 13px/1 'Barlow';letter-spacing:.08em;text-transform:uppercase;color:#3B2610">Lisboa · W · 10–3</span>
+<span style="font:800 italic 40px/1 'Barlow Condensed';text-transform:uppercase;color:#111311">Sporting</span>
+<span style="font:800 150px/0.8 'Barlow Condensed';color:#111311;letter-spacing:-.02em">112</span>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-bottom:6px">
+<span style="padding:6px 14px;border-radius:999px;background:#111311;color:#FFFFFF;font:700 13px/1 'Barlow';letter-spacing:.1em">FINAL</span>
+<span style="font:600 13px/1 'Barlow';color:#3B2610">Oct 12 · Pavilhão João Rocha · 18,204</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+<span style="font:600 13px/1 'Barlow';letter-spacing:.08em;text-transform:uppercase;color:#3B2610">Lisboa · L · 7–6</span>
+<span style="font:800 italic 40px/1 'Barlow Condensed';text-transform:uppercase;color:#111311">Benfica</span>
+<span style="font:800 150px/0.8 'Barlow Condensed';color:#5A3A1C;letter-spacing:-.02em">106</span>
+</div>
+</div>
+<div style="padding:40px 48px 52px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px">
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font:800 italic 46px/0.95 'Barlow Condensed';text-transform:uppercase;text-wrap:balance">Cruz's 32 carry Sporting past Benfica</h2>
+<p style="margin:0;font:400 17px/1.5 'Barlow';color:#3D3B37;max-width:640px;text-wrap:pretty">The game was tied at 101 with 3:21 left. Gabriel Cruz hit a 26-footer, Gabriel Dias blocked a shot at the rim, and Sporting closed on an 11–5 run for its fourth straight win.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Score flow</span><span style="font:500 13px/1 'Barlow';color:#6B6862">Largest lead · Sporting +{{ maxH }} · Benfica +{{ maxA }}</span></div>
+<svg viewBox="0 0 480 160" style="width:100%;display:block">
+<defs><clipPath id="flowTop"><rect x="0" y="0" width="480" height="80"></rect></clipPath><clipPath id="flowBot"><rect x="0" y="80" width="480" height="80"></rect></clipPath></defs>
+<line x1="120" y1="0" x2="120" y2="160" stroke="#EFE9DF"></line><line x1="240" y1="0" x2="240" y2="160" stroke="#EFE9DF"></line><line x1="360" y1="0" x2="360" y2="160" stroke="#EFE9DF"></line>
+<path d="{{ flowArea }}" fill="#1E7A46" clip-path="url(#flowTop)"></path>
+<path d="{{ flowArea }}" fill="#111311" clip-path="url(#flowBot)"></path>
+<line x1="0" y1="80" x2="480" y2="80" stroke="#B9B0A1" stroke-width="1"></line>
+</svg>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);font:600 12px/1 'Barlow';color:#6B6862;text-align:center"><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span></div>
+<div style="display:flex;gap:18px;font:500 13px/1 'Barlow';color:#6B6862"><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#1E7A46"></span>Sporting lead</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#111311"></span>Benfica lead</span></div>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Team comparison</span><span style="font:600 13px/1 'Barlow';color:#6B6862">SCP · SLB</span></div>
+<sc-for list="{{ compare }}" as="c" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:64px 1fr 64px;gap:14px;align-items:center">
+<span style="font:700 20px/1 'Barlow Condensed'">{{ c.hv }}</span>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 12px/1 'Barlow';letter-spacing:.06em;text-transform:uppercase;color:#6B6862;text-align:center">{{ c.label }}</span><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:3px"><div style="width:{{ c.hw }};background:#1E7A46"></div><div style="flex:1;background:#111311"></div></div></div>
+<span style="font:700 20px/1 'Barlow Condensed';text-align:right">{{ c.av }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Top performers</span>
+<sc-for list="{{ perf }}" as="p" hint-placeholder-count="4">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center">
+<div style="width:52px;height:52px;border-radius:12px;background:repeating-linear-gradient(135deg,#EFE9DF 0 6px,#E4DCCF 6px 12px);display:flex;align-items:flex-end;justify-content:flex-end;padding:3px;box-sizing:border-box"><span style="width:20px;height:20px;border-radius:50%;background:{{ p.color }};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font:700 11px/1 'Barlow Condensed'">{{ p.num }}</span></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font:700 18px/1 'Barlow Condensed';text-transform:uppercase">{{ p.name }}</span><span style="font:500 13px/1 'Barlow';color:#6B6862">{{ p.sub }}</span></div>
+<div style="display:flex;gap:12px;text-align:center">
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font:800 26px/1 'Barlow Condensed'">{{ p.pts }}</span><span style="font:600 10px/1 'Barlow';color:#6B6862">PTS</span></span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font:800 26px/1 'Barlow Condensed'">{{ p.reb }}</span><span style="font:600 10px/1 'Barlow';color:#6B6862">REB</span></span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font:800 26px/1 'Barlow Condensed'">{{ p.ast }}</span><span style="font:600 10px/1 'Barlow';color:#6B6862">AST</span></span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font:700 22px/1 'Barlow Condensed';text-transform:uppercase">Key moments</span>
+<div style="background:#111311;color:#FFFFFF;border-radius:16px;padding:8px 20px">
+<div style="display:grid;grid-template-columns:70px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid #2A2C2A"><span style="font:700 15px/1.2 'Barlow Condensed';color:#4FBF7A">Q2 0:00</span><span style="font:500 14px/1.4 'Barlow';text-wrap:pretty">Atli hits a 30-footer at the halftime buzzer. Sporting lead 59–55.</span></div>
+<div style="display:grid;grid-template-columns:70px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid #2A2C2A"><span style="font:700 15px/1.2 'Barlow Condensed';color:#4FBF7A">Q3 5:12</span><span style="font:500 14px/1.4 'Barlow';text-wrap:pretty">Maurício picks up his 4th foul and goes to the bench. Benfica go on a 9–2 run without him anyway.</span></div>
+<div style="display:grid;grid-template-columns:70px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid #2A2C2A"><span style="font:700 15px/1.2 'Barlow Condensed';color:#4FBF7A">Q4 2:47</span><span style="font:500 14px/1.4 'Barlow';text-wrap:pretty">Cruz's 26-foot 3 breaks the 101–101 tie. Sporting never trail again.</span></div>
+<div style="display:grid;grid-template-columns:70px 1fr;gap:12px;padding:14px 0"><span style="font:700 15px/1.2 'Barlow Condensed';color:#4FBF7A">Q4 0:41</span><span style="font:500 14px/1.4 'Barlow';text-wrap:pretty">Dias blocks Malundo at the rim to keep the lead at 108–104.</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Player game detail · phone (full scroll)</div>
+<div class="dv-card" style="width:390px;border-radius:44px;border:10px solid #111311;background:#F3EEE5;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:600 15px/1 'Barlow';color:#FFFFFF;background:#111311"><span>9:41</span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #FFFFFF"></span></div>
+<div style="background:#1E7A46;color:#FFFFFF;padding:6px 20px 22px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;justify-content:space-between;font:600 13px/1 'Barlow';color:#D6EBDD"><span>‹ Box score</span><span>Season stats</span></div>
+<div style="display:flex;gap:16px;align-items:center">
+<div style="width:92px;height:92px;border-radius:18px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.14) 0 7px,rgba(255,255,255,.06) 7px 14px);display:flex;align-items:center;justify-content:center;font:500 11px/1.2 'Barlow';color:#D6EBDD;text-align:center">player<br>photo</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:800 54px/0.8 'Barlow Condensed';color:#4FBF7A;opacity:.9">7</span>
+<span style="font:800 italic 30px/0.95 'Barlow Condensed';text-transform:uppercase">Gabriel<br>Cruz</span>
+<span style="font:500 13px/1 'Barlow';color:#D6EBDD">Guard · Sporting CP</span>
+</div>
+</div>
+<div style="padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);font:600 13px/1 'Barlow';display:flex;justify-content:space-between"><span>vs SLB · Oct 12</span><span>W 112–106 · 38 MIN</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);background:#111311;color:#FFFFFF">
+<div style="padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:4px;border-right:1px solid #2A2C2A"><span style="font:800 48px/1 'Barlow Condensed'">32</span><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;color:#B9B4AA">PTS</span></div>
+<div style="padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:4px;border-right:1px solid #2A2C2A"><span style="font:800 48px/1 'Barlow Condensed'">5</span><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;color:#B9B4AA">REB</span></div>
+<div style="padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:800 48px/1 'Barlow Condensed'">7</span><span style="font:600 11px/1 'Barlow';letter-spacing:.1em;color:#B9B4AA">AST</span></div>
+</div>
+<div style="padding:18px 16px 24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<sc-for list="{{ splits }}" as="sp" hint-placeholder-count="3">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 11px/1 'Barlow';letter-spacing:.08em;color:#6B6862">{{ sp.l }}</span>
+<span style="font:800 24px/1 'Barlow Condensed'">{{ sp.v }}</span>
+<div style="height:5px;border-radius:3px;background:#EFE9DF;overflow:hidden"><div style="height:100%;width:{{ sp.w }};background:#1E7A46"></div></div>
+<span style="font:500 12px/1 'Barlow';color:#6B6862">{{ sp.p }}</span>
+</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:10px 0;display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed'">2</span><span style="font:600 10px/1 'Barlow';color:#6B6862">STL</span></div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:10px 0;display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed'">0</span><span style="font:600 10px/1 'Barlow';color:#6B6862">BLK</span></div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:10px 0;display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed'">3</span><span style="font:600 10px/1 'Barlow';color:#6B6862">TOV</span></div>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:12px;padding:10px 0;display:flex;flex-direction:column;gap:4px"><span style="font:700 20px/1 'Barlow Condensed';color:#1E7A46">+12</span><span style="font:600 10px/1 'Barlow';color:#6B6862">+/−</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 20px/1 'Barlow Condensed';text-transform:uppercase">Shot chart</span><span style="font:500 12px/1 'Barlow';color:#6B6862">20 attempts</span></div>
+<div style="border-radius:14px;overflow:hidden;box-shadow:0 2px 0 #B98A52">
+<dc-import name="Court" shots="{{ okShots }}" hint-size="100%,330px"></dc-import>
+</div>
+<span style="font:700 20px/1 'Barlow Condensed';text-transform:uppercase;padding-top:6px">His plays · Q4</span>
+<div style="background:#FFFFFF;border:1px solid #E4DCCF;border-radius:14px;overflow:hidden">
+<sc-for list="{{ okPlays }}" as="e" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #EFE9DF">
+<span style="font:700 15px/1 'Barlow Condensed';color:#6B6862">{{ e.c }}</span>
+<span style="font:500 14px/1.25 'Barlow'">{{ e.t }}</span>
+<span style="font:700 12px/1 'Barlow';padding:3px 6px;border-radius:5px;background:{{ e.bg }};color:{{ e.fg }}">{{ e.tag }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "tracker <a class="dv-oid" href="#1b">1b</a> with a bench/sub flow" · "dark broadcast version of <a class="dv-oid" href="#1g">1g</a>" · "tablet layout for the box score <a class="dv-oid" href="#1e">1e</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;shotFilter&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;All&quot;,&quot;Made&quot;,&quot;Missed&quot;],&quot;default&quot;:&quot;All&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Shot charts&quot;},&quot;padSide&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Right&quot;,&quot;Left&quot;],&quot;default&quot;:&quot;Right&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tablet tracker&quot;}}">
+class Component extends DCLogic {
+  state = { trTeam: 'H', trSel: 7, phTeam: 'H', phSel: 25, soSel: 7, pcTeam: 'H', pcSel: 7, scTeam: 'H', events: [], chain: null, pending: null, clock: 167, shot: 14, running: false, period: 4, live: null, tmSel: 'scp', tmDraft: { num: '', first: '', last: '', short: '' },
+    teamLib: [{ id: 'scp', name: 'Sporting CP', abbr: 'SCP', city: 'Lisboa', color: '#1E7A46', players: [{"num":7,"first":"Gabriel","last":"Cruz","short":"Cruz","pos":""},{"num":25,"first":"Cem","last":"Atli","short":"Atli","pos":""},{"num":31,"first":"Guilherme","last":"Novo","short":"Novo","pos":""},{"num":17,"first":"Vicente","last":"Gonçalves","short":"Gonçalves","pos":""},{"num":24,"first":"Gabriel","last":"Dias","short":"Dias","pos":""},{"num":95,"first":"Lourenço","last":"Vermelho","short":"Vermelho","pos":""},{"num":13,"first":"Nuno","last":"Póvoa","short":"Póvoa","pos":""},{"num":88,"first":"Rafael","last":"Silva","short":"Silva","pos":""},{"num":15,"first":"Gonçalo","last":"Conceição","short":"Conceição","pos":""},{"num":6,"first":"Bruno","last":"Chiodaro","short":"Chiodaro","pos":""},{"num":26,"first":"Tiago","last":"Martins","short":"Martins","pos":""},{"num":55,"first":"Marcelo","last":"Varela","short":"Varela","pos":""}] }, { id: 'slb', name: 'SL Benfica', abbr: 'SLB', city: 'Lisboa', color: '#111311', players: [{"num":1,"first":"César","last":"Malundo","short":"Malundo","pos":""},{"num":2,"first":"Filipe","last":"Amorim","short":"Amorim","pos":""},{"num":3,"first":"Luca","last":"Esteves","short":"Esteves","pos":""},{"num":4,"first":"Erichel","last":"Baza","short":"Baza","pos":""},{"num":9,"first":"Vicente","last":"Maurício","short":"Maurício","pos":""},{"num":10,"first":"João","last":"Correia","short":"Correia","pos":""},{"num":11,"first":"Skaylan","last":"Diniz","short":"Diniz","pos":""},{"num":13,"first":"Jáchym","last":"Zajícek","short":"Zajícek","pos":""},{"num":15,"first":"Gustavo","last":"Gonçalves","short":"Gonçalves","pos":""},{"num":17,"first":"Salvador","last":"Coelho","short":"Coelho","pos":""},{"num":20,"first":"Francisco","last":"Fernandes","short":"Fernandes","pos":""},{"num":21,"first":"Alexandre","last":"Costa","short":"Costa","pos":""}] }],
+    setup: { step: 1, homeId: 'scp', awayId: 'slb', venue: 'Pavilhão João Rocha', comp: 'Liga · Round 6', date: '18 Oct 2026 · 18:00', started: false, starters: { H: [7, 25, 31, 17, 24], A: [1, 2, 3, 4, 9] }, rules: { preset: 'FIBA', periods: 4, periodMin: 10, otMin: 5, onCourt: 5, foulOut: 5, bonus: 4, shotClock: 24, shotReset: 14, toMode: 'Per half', to1: 2, to2: 3, toOT: 1, askFb: true, askAst: true, stopOnFoul: true, trackH: 'Full detail', trackA: 'Full detail' } } };
+  componentDidMount() { this._iv = setInterval(() => { if (this.state.running) this.setState(s => s.clock <= 0 ? { running: false } : { clock: s.clock - 1, shot: Math.max(0, s.shot - 1) }); }, 1000); }
+  componentWillUnmount() { clearInterval(this._iv); }
+  data() {
+    if (this._d) return this._d;
+    const G = '#1E7A46', K = '#111311';
+    const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    // num,name,pos,min,fgm,fga,tpm,tpa,ftm,fta,reb,ast,stl,blk,to,pf,pm
+    const HP = [[7,'Gabriel Cruz','G',38,11,20,4,9,6,7,5,7,2,0,3,2,12],[25,'Cem Atli','G',36,7,15,3,7,2,2,3,9,1,0,2,3,8],[31,'Guilherme Novo','F',34,6,12,2,5,3,4,8,2,1,1,1,2,6],[17,'Vicente Gonçalves','F',30,4,9,1,3,2,2,6,1,0,1,1,4,1],[24,'Gabriel Dias','C',32,7,10,0,0,4,6,12,2,1,3,2,3,10],[95,'Lourenço Vermelho','G',26,3,7,1,3,2,2,2,3,1,0,1,1,-3],[13,'Nuno Póvoa','F',24,2,5,0,1,0,0,4,0,0,1,0,2,2],[88,'Rafael Silva','G',20,1,3,0,2,0,0,1,1,0,0,1,1,-6]];
+    const AP = [[1,'César Malundo','G',37,10,21,3,8,7,8,4,5,1,0,4,3,-4],[2,'Filipe Amorim','G',35,8,17,4,9,2,3,3,6,2,0,2,2,-7],[3,'Luca Esteves','F',33,6,11,2,4,1,2,7,3,0,1,1,4,-9],[4,'Erichel Baza','F',30,4,10,1,4,3,4,9,1,1,0,2,3,-2],[9,'Vicente Maurício','C',31,5,8,0,0,2,4,10,1,0,2,1,5,-10],[10,'João Correia','G',28,3,8,2,5,2,2,2,4,1,0,2,2,3],[11,'Skaylan Diniz','G',24,1,4,1,3,0,0,3,0,0,0,0,1,0],[13,'Jáchym Zajícek','C',22,1,2,0,0,0,0,4,1,0,1,1,2,-1]];
+    const row = p => ({ num: p[0], name: p[1], short: p[1].split(' ')[1], pos: p[2], min: p[3], pts: 2 * p[4] + p[6] + p[8], fg: p[4] + '-' + p[5], tp: p[6] + '-' + p[7], ft: p[8] + '-' + p[9], reb: p[10], ast: p[11], stl: p[12], blk: p[13], to: p[14], pf: p[15], pm: (p[16] > 0 ? '+' : p[16] < 0 ? '−' : '') + Math.abs(p[16]), pmC: p[16] > 0 ? G : p[16] < 0 ? '#6B6862' : K });
+    const sum = (P, i) => P.reduce((a, p) => a + p[i], 0);
+    const pct = (m, a) => (a ? (m / a * 100).toFixed(1) : '0.0') + '%';
+    const tot = P => ({ min: sum(P,3), pts: 2*sum(P,4)+sum(P,6)+sum(P,8), fgm: sum(P,4), fga: sum(P,5), tpm: sum(P,6), tpa: sum(P,7), ftm: sum(P,8), fta: sum(P,9), reb: sum(P,10), ast: sum(P,11), stl: sum(P,12), blk: sum(P,13), to: sum(P,14), pf: sum(P,15) });
+    const team = (P, full, color) => { const t = tot(P); return { full, color, starters: P.slice(0,5).map(row), bench: P.slice(5).map(row), fgp: pct(t.fgm,t.fga), tpp: pct(t.tpm,t.tpa), ftp: pct(t.ftm,t.fta), t: { ...t, fg: t.fgm+'-'+t.fga, tp: t.tpm+'-'+t.tpa, ft: t.ftm+'-'+t.fta }, raw: t }; };
+    const bH = team(HP, 'Sporting CP', G), bA = team(AP, 'SL Benfica', K);
+    const genShots = (P, c, seed) => { const r = rng(seed), out = []; P.forEach(p => { const [num,, , , fgm, fga, tpm, tpa] = p; for (let i = 0; i < fga; i++) { const three = i < tpa, made = three ? i < tpm : (i - tpa) < (fgm - tpm); let x, y, zone; if (three) { if (r() < .22) { x = r() < .5 ? 14 + r()*12 : 474 + r()*12; y = 10 + r()*118; zone = 'Corner 3'; } else { const a = (22 + r()*136) * Math.PI/180, d = 244 + r()*30; x = 250 + Math.cos(a)*d; y = 52.5 + Math.sin(a)*d; zone = 'Above-break 3'; } } else if (r() < .55) { const a = r()*Math.PI, d = 6 + r()*74; x = 250 + Math.cos(a)*d; y = Math.max(10, 52.5 + Math.sin(a)*d); zone = 'Paint'; } else { const a = (10 + r()*160) * Math.PI/180, d = 96 + r()*118; x = 250 + Math.cos(a)*d; y = 52.5 + Math.sin(a)*d; zone = 'Mid-range'; } out.push({ x: +x.toFixed(1), y: +Math.min(y, 455).toFixed(1), made, c, zone, num }); } }); return out; };
+    const sH = genShots(HP, G, 11), sA = genShots(AP, K, 29);
+    const zones = S => ['Paint','Mid-range','Corner 3','Above-break 3'].map(z => { const a = S.filter(s => s.zone === z), m = a.filter(s => s.made).length, p = a.length ? Math.round(m / a.length * 100) : 0; return { z, m, a: a.length, pct: p + '%', w: p + '%', share: Math.round(a.length / S.length * 100) + '% of shots' }; });
+    const pbpRaw = [['2:47','H','Cruz makes 26-ft 3PT jumper','3PT','Assist: Atli','104–101','+3'],['3:05','A','Maurício defensive rebound','REB','','101–101',''],['3:08','H','Gonçalves misses driving layup','MISS','2PT · 3 ft','101–101',''],['3:21','A','Malundo makes free throw 2 of 2','FT','','101–101','+1'],['3:21','A','Malundo makes free throw 1 of 2','FT','','101–100','+1'],['3:21','H','Gonçalves shooting foul','FOUL','Personal 4 · Team 4','101–99',''],['3:38','H','Dias alley-oop dunk','2PT','Assist: Atli','101–99','+2'],['3:55','H','Vermelho in for Novo','SUB','','99–99',''],['4:02','A','Amorim makes 24-ft 3PT jumper','3PT','Assist: Malundo','99–99','+3'],['4:20','H','Atli bad-pass turnover','TOV','Steal: Amorim','99–96',''],['4:41','H','Novo makes 17-ft pull-up','2PT','Unassisted','99–96','+2'],['4:58','A','Esteves misses 3PT jumper','MISS','Rebound: Dias','97–96','']];
+    const pbp = pbpRaw.map(e => { const sc = !!e[6]; return { clock: e[0], color: e[1] === 'H' ? G : K, abbr: e[1] === 'H' ? 'SCP' : 'SLB', title: e[2], tag: e[3], detail: e[4], detailSep: e[4] ? ' · ' : '', score: e[5], pts: e[6], scoring: sc, tw: sc ? 700 : 500, sw: sc ? 800 : 600, sc: sc ? K : '#6B6862' }; });
+    // score flow
+    const knots = [[0,0],[12,-2],[24,4],[36,1],[48,6]]; const series = [];
+    for (let t = 0; t <= 48; t++) { const k = Math.min(3, Math.floor(t / 12)), [t0,v0] = knots[k], [t1,v1] = knots[k+1]; const base = v0 + (v1 - v0) * (t - t0) / (t1 - t0); const n = (3.2*Math.sin(t*0.9+1) + 2.4*Math.sin(t*0.37+2)) * Math.sin(Math.PI * ((t % 12) / 12)); series.push(Math.round(base + n)); }
+    series[48] = 6;
+    const pts = series.map((v, t) => (t * 10) + ' ' + (80 - v * 6).toFixed(1));
+    const flowArea = 'M0 80 L' + pts.join(' L') + ' L480 80 Z';
+    const maxH = Math.max(...series), maxA = -Math.min(...series);
+    const cmp = (label, h, a, fmt) => ({ label, hv: fmt ? fmt(h) : h, av: fmt ? fmt(a) : a, hw: (h / (h + a) * 100).toFixed(1) + '%' });
+    const R = bH.raw, Q = bA.raw, pf = v => v.toFixed(1);
+    const paint = S => S.filter(s => s.zone === 'Paint' && s.made).length * 2;
+    const compare = [cmp('Field goal %', R.fgm/R.fga*100, Q.fgm/Q.fga*100, pf), cmp('3-point %', R.tpm/R.tpa*100, Q.tpm/Q.tpa*100, pf), cmp('Rebounds', R.reb, Q.reb), cmp('Assists', R.ast, Q.ast), cmp('Points in paint', paint(sH), paint(sA)), cmp('Turnovers', R.to, Q.to)];
+    const perfP = [[HP[0],G],[AP[0],K],[HP[4],G],[AP[1],K]];
+    const perf = perfP.map(([p, color]) => ({ color, num: p[0], name: p[1], pts: 2*p[4]+p[6]+p[8], reb: p[10], ast: p[11], sub: (color === G ? 'SCP' : 'SLB') + ' · ' + p[4] + '-' + p[5] + ' FG · ' + p[6] + '-' + p[7] + ' 3PT' }));
+    const ROST = null, START = null;
+    const mk = (abbr, city, name, rec, color, score, win) => ({ abbr, city, name, rec, color, score, sc: win === false ? '#9A958C' : K });
+    const g = (status, arena, rows, a1, a2, liveF) => ({ status, arena, rows, a1, a2, live: !!liveF, notLive: !liveF });
+    const gameGroups = [
+      { title: 'Live now', games: [g('Q4 2:47','Pavilhão João Rocha',[mk('SCP','Lisboa','Sporting','9–3',G,104),mk('SLB','Lisboa','Benfica','7–5',K,101,false)],'Open tracker','Play-by-play',1), g('Q2 0:34','Heron Fieldhouse',[mk('LKH','Lakeside','Herons','6–6','#6B6862',58,false),mk('CRM','Copper Ridge','Miners','8–4','#2F4A3A',61)],'Open tracker','Play-by-play',1)] },
+      { title: 'Final', games: [g('FINAL','Owl Center',[mk('NGO','Northgate','Owls','8–5',K,98),mk('BVT','Bayview','Tides','5–8','#6B6862',92,false)],'Box score','Recap'), g('FINAL / OT','Summit Dome',[mk('SME','Summit','Elk','10–3',G,121),mk('RVC','Riverton','Cranes','4–9','#2F4A3A',117,false)],'Box score','Recap'), g('FINAL','Granite Hall',[mk('GRB','Granite','Bulls','3–10','#6B6862',88,false),mk('WFH','Westfield','Hawks','7–6',K,95)],'Box score','Recap')] },
+      { title: 'Upcoming', games: [g('8:00 PM','Mariner Pavilion',[mk('EPM','Eastport','Mariners','6–7','#2F4A3A',''),mk('FMF','Fairmont','Foxes','9–4',G,'')],'Preview','Set reminder'), g('9:30 PM','Tides Arena',[mk('BVT','Bayview','Tides','5–8','#6B6862',''),mk('LKH','Lakeside','Herons','6–6',K,'')],'Preview','Set reminder'), g('10:00 PM','Copper Arena',[mk('CRM','Copper Ridge','Miners','8–4','#2F4A3A',''),mk('NGO','Northgate','Owls','8–5',K,'')],'Preview','Set reminder')] }
+    ];
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d, i) => ({ d, n: 6 + i, on: i === 6, off: i !== 6 }));
+    const ok = HP[0];
+    const splits = [['FG',ok[4],ok[5]],['3PT',ok[6],ok[7]],['FT',ok[8],ok[9]]].map(([l,m,a]) => ({ l, v: m + '/' + a, w: Math.round(m/a*100) + '%', p: Math.round(m/a*100) + '%' }));
+    const okPlays = [['2:47','26-ft 3PT jumper, made','+3',1],['5:30','Assist to Dias, dunk','AST',0],['6:12','Steal from Amorim','STL',0],['7:48','Pull-up 2PT, missed','MISS',2],['8:05','Free throws, 2 of 2','+2',1]].map(([c,t,tag,k]) => ({ c, t, tag, bg: k === 1 ? '#E2EFE6' : k === 2 ? '#EFE9DF' : '#111311', fg: k === 1 ? '#145532' : k === 2 ? '#6B6862' : '#FFFFFF' }));
+    return this._d = { bH, bA, sH, sA, zones, pbp, flowArea, maxH, maxA, compare, perf, ROST, START, gameGroups, days, HP, AP, splits, okPlays, okShots: sH.filter(s => s.num === 7), G, K };
+  }
+  defR() { return { preset: 'FIBA', periods: 4, periodMin: 10, otMin: 5, onCourt: 5, foulOut: 5, bonus: 4, shotClock: 24, shotReset: 14, toMode: 'Per half', to1: 2, to2: 3, toOT: 1, askFb: true, askAst: true, stopOnFoul: true, trackH: 'Full detail', trackA: 'Full detail' }; }
+  R() { return this.state.live ? this.state.live.rules : this.defR(); }
+  foulStop() { return this.R().stopOnFoul ? { running: false } : {}; }
+  pl(p) { const n = this.R().periods; if (p > n) return 'OT' + (p - n); return (n === 2 ? 'H' : 'Q') + p; }
+  short(tm) { return (tm.name || '').replace(/^(SL|SC|FC|CD|GD|AD|CF)\s+/i, '').replace(/\s+(CP|FC|SC)$/i, '') || tm.abbr; }
+  teamOf(t) { const s = this.state, id = s.live ? (t === 'H' ? s.live.homeId : s.live.awayId) : (t === 'H' ? 'scp' : 'slb'); return s.teamLib.find(x => x.id === id) || s.teamLib[t === 'H' ? 0 : 1]; }
+  demoBase() { return { H: { 7: [29, 2], 25: [17, 3], 95: [9, 1], 17: [11, 4], 24: [18, 3], 31: [15, 2], 13: [4, 2], 88: [1, 1] }, A: { 1: [28, 3], 2: [22, 2], 3: [13, 4], 4: [10, 3], 9: [12, 5], 10: [10, 2], 11: [3, 1], 13: [3, 2] } }; }
+  rost(t) { const L = !!this.state.live, base = this.demoBase()[t]; return this.teamOf(t).players.map(p => { const b = (!L && base[p.num]) || [0, 0]; return [p.num, p.short || p.last, p.pos, b[0], b[1], p.first]; }); }
+  P(t, n) { return this.rost(t).find(p => p[0] === n); }
+  startCourt(t) { const s = this.state, n = this.R().onCourt, nums = this.teamOf(t).players.map(p => p.num), base = s.live ? s.live.starters[t] : (t === 'H' ? [7, 25, 95, 17, 24] : [1, 2, 3, 4, 9]); const c = base.filter(x => nums.includes(x)); for (const x of nums) { if (c.length >= n) break; if (!c.includes(x)) c.push(x); } return c.slice(0, n); }
+  toLeft(t) {
+    const s = this.state, R = this.R();
+    const part = p => { if (p > R.periods) return 'OT' + p; if (R.toMode === 'Per game') return 'G'; if (R.toMode === 'Per period') return 'P' + p; return p <= Math.ceil(R.periods / 2) ? 'H1' : 'H2'; };
+    const allow = pt => pt.startsWith('OT') ? R.toOT : pt === 'H2' ? R.to2 : R.to1, cur = part(s.period);
+    const used = s.events.filter(e => e.type === 'timeout' && e.t === t && part(e.period ?? s.period) === cur).length + (s.live ? 0 : (t === 'H' ? 1 : 2));
+    return Math.max(0, allow(cur) - used);
+  }
+  clockCtl(dv) {
+    const s = this.state, R = this.R(), tied = dv.score.H === dv.score.A, canNext = s.clock <= 0 && (s.period < R.periods || tied);
+    return { clockBtn: s.clock <= 0 ? (canNext ? 'Start ' + this.pl(s.period + 1) : 'Final') : s.running ? 'Pause clock' : 'Start clock', clockBg: s.running ? '#1E7A46' : '#3A3C3A',
+      toggleClock: () => this.setState(x => { if (x.clock <= 0) return canNext ? { period: x.period + 1, clock: (x.period + 1 > R.periods ? R.otMin : R.periodMin) * 60, shot: R.shotClock, running: false } : null; return { running: !x.running }; }) };
+  }
+  wizard() {
+    const s = this.state, su = s.setup, RU = su.rules, lib = s.teamLib;
+    const setSu = p => this.setState(x => ({ setup: { ...x.setup, ...p } }));
+    const setRule = (k, v) => this.setState(x => ({ setup: { ...x.setup, started: false, rules: { ...x.setup.rules, [k]: v, preset: 'Custom' } } }));
+    const setOpt = (k, v) => this.setState(x => ({ setup: { ...x.setup, rules: { ...x.setup.rules, [k]: v } } }));
+    const team = id => lib.find(t => t.id === id);
+    const firstN = (id, n) => (team(id) ? team(id).players.map(p => p.num) : []).slice(0, n);
+    const pick = (key, id) => this.setState(x => { const o = key === 'homeId' ? 'awayId' : 'homeId', su2 = { ...x.setup, [key]: id, started: false }; if (x.setup[o] === id) su2[o] = x.setup[key]; const n = x.setup.rules.onCourt; su2.starters = { H: firstN(su2.homeId, n), A: firstN(su2.awayId, n) }; return { setup: su2 }; });
+    const card = key => lib.map(t => { const on = t.id === su[key]; return { name: t.name, abbr: t.abbr, color: t.color, sub: (t.city ? t.city + ' · ' : '') + t.players.length + ' players', pick: () => pick(key, t.id), bg: on ? '#111311' : '#FFFFFF', fg: on ? '#FFFFFF' : '#111311', sub2: on ? '#B9B4AA' : '#6B6862', bd: on ? '#111311' : '#E4DCCF', check: on ? '✓' : '' }; });
+    const steps = [['Matchup', 'Teams, venue, date'], ['Rules', 'Periods, clock, timeouts'], ['Lineups', 'Starting players'], ['Review', 'Check and start']].map(([n, d], i) => { const k = i + 1, on = su.step === k, done = su.step > k; return { n, d, label: done ? '✓' : String(k), go: () => setSu({ step: k }), bg: on ? '#FFFFFF' : 'transparent', fg: on ? '#111311' : '#FFFFFF', sub: on ? '#6B6862' : '#8F8B83', cbg: on || done ? '#1E7A46' : '#2A2C2A' }; });
+    const PRESETS = { FIBA: { periods: 4, periodMin: 10, otMin: 5, onCourt: 5, foulOut: 5, bonus: 4, shotClock: 24, shotReset: 14, toMode: 'Per half', to1: 2, to2: 3, toOT: 1 }, NBA: { periods: 4, periodMin: 12, otMin: 5, onCourt: 5, foulOut: 6, bonus: 4, shotClock: 24, shotReset: 14, toMode: 'Per game', to1: 7, to2: 0, toOT: 2 }, Youth: { periods: 4, periodMin: 8, otMin: 3, onCourt: 5, foulOut: 5, bonus: 4, shotClock: 24, shotReset: 14, toMode: 'Per half', to1: 2, to2: 2, toOT: 1 } };
+    const presets = ['FIBA', 'NBA', 'Youth', 'Custom'].map(p => ({ p, go: () => p === 'Custom' ? setRule('preset', 'Custom') : this.setState(x => ({ setup: { ...x.setup, started: false, rules: { ...x.setup.rules, ...PRESETS[p], preset: p } } })), bg: RU.preset === p ? '#111311' : 'transparent', fg: RU.preset === p ? '#FFFFFF' : '#111311' }));
+    const stepper = ([label, k, min, max, unit]) => ({ label, val: RU[k], unit, dec: () => setRule(k, Math.max(min, RU[k] - 1)), inc: () => setRule(k, Math.min(max, RU[k] + 1)), decOp: RU[k] <= min ? 0.35 : 1, incOp: RU[k] >= max ? 0.35 : 1 });
+    const fields = [['Periods', 'periods', 1, 8, ''], ['Period length', 'periodMin', 1, 20, 'min'], ['Overtime length', 'otMin', 1, 10, 'min'], ['Players on court', 'onCourt', 3, 5, ''], ['Fouls to foul out', 'foulOut', 3, 8, 'PF'], ['Team fouls before bonus', 'bonus', 2, 10, ''], ['Shot clock', 'shotClock', 10, 35, 's'], ['Reset after off. rebound', 'shotReset', 10, 24, 's']].map(stepper);
+    const toDefs = RU.toMode === 'Per half' ? [['1st half', 'to1', 0, 9, ''], ['2nd half', 'to2', 0, 9, ''], ['Each overtime', 'toOT', 0, 5, '']] : RU.toMode === 'Per period' ? [['Each period', 'to1', 0, 9, ''], ['Each overtime', 'toOT', 0, 5, '']] : [['Whole game', 'to1', 0, 12, ''], ['Each overtime', 'toOT', 0, 5, '']];
+    const toModes = ['Per half', 'Per period', 'Per game'].map(m => ({ m, go: () => setRule('toMode', m), bg: RU.toMode === m ? '#111311' : 'transparent', fg: RU.toMode === m ? '#FFFFFF' : '#111311' }));
+    const toggles = [['Ask "Was it a fast break?" after every 2PT/3PT', 'askFb'], ['Ask who assisted after made shots', 'askAst'], ['Stop the game clock on every foul', 'stopOnFoul']].map(([label, k]) => ({ label, toggle: () => setOpt(k, !RU[k]), bg: RU[k] ? '#1E7A46' : '#CFC5B5', kx: RU[k] ? 'translateX(20px)' : 'translateX(0px)' }));
+    const H = team(su.homeId), A = team(su.awayId);
+    const track = [['trackH', H], ['trackA', A]].map(([k, tm]) => ({ name: tm ? tm.name : '—', color: tm ? tm.color : '#6B6862', abbr: tm ? tm.abbr : '', opts: ['Full detail', 'Team only'].map(o => ({ o, go: () => setOpt(k, o), bg: RU[k] === o ? '#111311' : 'transparent', fg: RU[k] === o ? '#FFFFFF' : '#111311' })) }));
+    const lineups = [['H', H], ['A', A]].map(([t, tm]) => { const st = su.starters[t] || [], ok = st.length === RU.onCourt; return { name: tm ? tm.name : '—', abbr: tm ? tm.abbr : '', color: tm ? tm.color : '#6B6862', count: st.length + ' / ' + RU.onCourt + ' starters', cbg: ok ? '#E2EFE6' : '#EFE9DF', cfg: ok ? '#145532' : '#6B6862', players: (tm ? tm.players : []).map(p => { const on = st.includes(p.num); return { num: p.num, first: p.first, last: p.last, toggle: () => this.setState(x => { const cur = x.setup.starters[t] || []; const nx = cur.includes(p.num) ? cur.filter(n => n !== p.num) : cur.length < x.setup.rules.onCourt ? [...cur, p.num] : cur; return { setup: { ...x.setup, started: false, starters: { ...x.setup.starters, [t]: nx } } }; }), bg: on ? tm.color : '#FFFFFF', fg: on ? '#FFFFFF' : '#111311', sub: on ? '#F3EEE5' : '#6B6862', bd: on ? tm.color : '#E4DCCF' }; }) }; });
+    const errs = [];
+    if (!H || !A || su.homeId === su.awayId) errs.push('Pick two different teams.');
+    [['H', H], ['A', A]].forEach(([t, tm]) => { if (!tm) return; const st = (su.starters[t] || []).filter(n => tm.players.some(p => p.num === n)); if (tm.players.length < RU.onCourt) errs.push(tm.name + ' needs at least ' + RU.onCourt + ' players.'); else if (st.length !== RU.onCourt) errs.push(tm.name + ': choose exactly ' + RU.onCourt + ' starters (now ' + st.length + ').'); const nums = tm.players.map(p => p.num); if (new Set(nums).size !== nums.length) errs.push(tm.name + ' has duplicate jersey numbers.'); });
+    const pw = RU.periods === 2 ? 'halves' : 'periods';
+    const toTxt = RU.toMode === 'Per half' ? RU.to1 + ' in the 1st half, ' + RU.to2 + ' in the 2nd, ' + RU.toOT + ' per OT' : RU.toMode === 'Per period' ? RU.to1 + ' per period, ' + RU.toOT + ' per OT' : RU.to1 + ' per game, ' + RU.toOT + ' per OT';
+    const qs = [RU.askFb && 'fast break', RU.askAst && 'assists'].filter(Boolean).join(', ') || 'none';
+    const rulesLines = [RU.preset + ' · ' + RU.periods + ' ' + pw + ' × ' + RU.periodMin + ' min · overtime ' + RU.otMin + ' min', RU.onCourt + ' players on court · foul out at ' + RU.foulOut, 'Bonus after ' + RU.bonus + ' team fouls per period', 'Shot clock ' + RU.shotClock + 's · ' + RU.shotReset + 's after an offensive rebound', 'Timeouts: ' + toTxt, 'Questions: ' + qs + ' · clock stops on fouls: ' + (RU.stopOnFoul ? 'yes' : 'no')].map(t => ({ t }));
+    const startersList = [['H', H, 'trackH'], ['A', A, 'trackA']].map(([t, tm, k]) => ({ name: tm ? tm.name : '—', color: tm ? tm.color : '#6B6862', mode: RU[k], list: (su.starters[t] || []).map(n => { const p = tm && tm.players.find(q => q.num === n); return p ? '#' + n + ' ' + p.first + ' ' + p.last : '#' + n; }).join(' · ') || 'No starters yet' }));
+    const rec = RU.trackA === 'Team only' && RU.trackH === 'Full detail' ? 'Recommended tracker: 2a (home in full detail, away team-level only)' : 'Recommended tracker: 1b on a tablet or 3a on a phone';
+    const start = () => { if (errs.length) return; const starters = { H: su.starters.H.filter(n => H.players.some(p => p.num === n)), A: su.starters.A.filter(n => A.players.some(p => p.num === n)) }; this.setState({ live: { homeId: su.homeId, awayId: su.awayId, rules: { ...RU }, starters }, events: [], chain: null, pending: null, period: 1, clock: RU.periodMin * 60, shot: RU.shotClock, running: false, trTeam: 'H', phTeam: 'H', pcTeam: 'H', trSel: starters.H[0], phSel: starters.H[0], soSel: starters.H[0], pcSel: starters.H[0], setup: { ...su, started: true } }); };
+    return { steps, s1: su.step === 1, s2: su.step === 2, s3: su.step === 3, s4: su.step === 4, home: card('homeId'), away: card('awayId'),
+      venue: su.venue, comp: su.comp, date: su.date, setVenue: e => setSu({ venue: e.target.value }), setComp: e => setSu({ comp: e.target.value }), setDate: e => setSu({ date: e.target.value }),
+      presets, fields, toModes, toFields: toDefs.map(stepper), toggles, track, lineups, errs: errs.map(t => ({ t })), hasErr: errs.length > 0, rulesLines, startersList, rec,
+      matchH: H ? H.name : '—', matchA: A ? A.name : '—', colH: H ? H.color : '#6B6862', colA: A ? A.color : '#6B6862', abbrH: H ? H.abbr : '', abbrA: A ? A.abbr : '',
+      canBack: su.step > 1, showNext: su.step < 4, showStart: su.step === 4, back: () => setSu({ step: su.step - 1 }), next: () => setSu({ step: su.step + 1 }), start,
+      startBg: errs.length ? '#CFC5B5' : '#1E7A46', started: !!su.started, footNote: su.step === 4 ? (errs.length ? errs.length + ' issue(s) to fix before starting' : (su.started ? 'Game is live in the trackers' : 'Ready to start')) : 'Step ' + su.step + ' of 4',
+      resetDemo: () => this.setState({ live: null, events: [], chain: null, pending: null, period: 4, clock: 167, shot: 14, running: false, trSel: 7, phSel: 25, soSel: 7, pcSel: 7, setup: { ...su, started: false } }) };
+  }
+  teamsView() {
+    const s = this.state, lib = s.teamLib, cur = lib.find(t => t.id === s.tmSel) || lib[0];
+    const upd = fn => this.setState(x => ({ teamLib: x.teamLib.map(t => t.id === cur.id ? fn(t) : t) }));
+    const setP = (i, k, v) => upd(t => ({ ...t, players: t.players.map((q, j) => j === i ? { ...q, [k]: v } : q) }));
+    const nums = cur.players.map(p => p.num);
+    const rows = cur.players.map((p, i) => { const dup = nums.filter(n => n === p.num).length > 1; return { num: p.num, first: p.first, last: p.last, short: p.short || '', shortPh: p.last || 'Short name', numBd: dup ? '#111311' : '#E4DCCF',
+      setNum: e => { const v = e.target.value.replace(/\D/g, ''); setP(i, 'num', v === '' ? '' : parseInt(v, 10)); }, setFirst: e => setP(i, 'first', e.target.value), setLast: e => setP(i, 'last', e.target.value), setShort: e => setP(i, 'short', e.target.value.slice(0, 14)),
+      pos: ['G', 'F', 'C'].map(o => ({ o, go: () => setP(i, 'pos', p.pos === o ? '' : o), bg: p.pos === o ? '#111311' : '#FFFFFF', fg: p.pos === o ? '#FFFFFF' : '#6B6862' })),
+      remove: () => upd(t => ({ ...t, players: t.players.filter((_, j) => j !== i) })) }; });
+    const d = s.tmDraft, setD = k => e => { const v = k === 'num' ? e.target.value.replace(/\D/g, '') : e.target.value; this.setState(x => ({ tmDraft: { ...x.tmDraft, [k]: v } })); };
+    const canAdd = d.num !== '' && d.last.trim() !== '' && !nums.includes(parseInt(d.num, 10));
+    const add = () => { if (!canAdd) return; upd(t => ({ ...t, players: [...t.players, { num: parseInt(d.num, 10), first: d.first.trim(), last: d.last.trim(), short: (d.short || '').trim() || d.last.trim(), pos: '' }] })); this.setState({ tmDraft: { num: '', first: '', last: '', short: '' } }); };
+    const list = lib.map(t => { const on = t.id === cur.id; return { name: t.name, abbr: t.abbr, color: t.color, sub: (t.city ? t.city + ' · ' : '') + t.players.length + ' players', pick: () => this.setState({ tmSel: t.id }), bg: on ? '#111311' : '#FFFFFF', fg: on ? '#FFFFFF' : '#111311', sub2: on ? '#B9B4AA' : '#6B6862', bd: on ? '#111311' : '#E4DCCF' }; });
+    const newTeam = () => { const id = 't' + Date.now(); this.setState(x => ({ teamLib: [...x.teamLib, { id, name: 'New team', abbr: 'NEW', city: '', color: '#6B6862', players: [] }], tmSel: id })); };
+    const colors = ['#1E7A46', '#145532', '#2F4A3A', '#111311', '#6B6862', '#C8102E'].map(c => ({ c, pick: () => upd(t => ({ ...t, color: c })), ring: c === cur.color ? '0 0 0 3px #FFFFFF, 0 0 0 5px #111311' : 'none' }));
+    return { list, newTeam, colors, rows, name: cur.name, abbr: cur.abbr, city: cur.city, color: cur.color,
+      setName: e => upd(t => ({ ...t, name: e.target.value })), setAbbr: e => upd(t => ({ ...t, abbr: e.target.value.toUpperCase().slice(0, 4) })), setCity: e => upd(t => ({ ...t, city: e.target.value })),
+      count: cur.players.length + ' players', draft: d, setDNum: setD('num'), setDFirst: setD('first'), setDLast: setD('last'), setDShort: setD('short'), add, addBg: canAdd ? '#1E7A46' : '#CFC5B5' };
+  }
+  last(t, n) { if (n == null) return this.tn(t); const p = this.P(t, n); return p ? p[1] : 'Team'; }
+  tapAt(e, src) {
+    if (this.state.chain) return;
+    const r = e.currentTarget.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 500, y = (e.clientY - r.top) / r.height * 470;
+    const dist = Math.hypot(x - 250, y - 52.5), three = y < 140 ? (x < 30 || x > 470) : dist > 237.5;
+    this.setState({ pending: { src, x: +x.toFixed(1), y: +y.toFixed(1), ft: Math.round(dist / 10), three } });
+  }
+  pendShot(made, s, trSel, soSel, pcSel) { const p = this.state.pending; if (!p) return; const so = p.src === 'so', pc = p.src === 'pc'; this.startShot(p.src, so ? 'H' : pc ? s.pcTeam : s.trTeam, so ? soSel : pc ? pcSel : trSel, p.three ? 3 : 2, made, { x: p.x, y: p.y, ft: p.ft }); }
+  oppAct() {
+    const t = 'A', busy = () => !!this.state.chain;
+    const go = (evs, chain, extra) => { if (busy()) return; const g = this.newG(); this.log(evs.map(e => ({ g, t, p: null, ...e })), chain ? { src: 'so', g, ...chain } : null, extra); };
+    return {
+      m1: () => go([{ type: 'shot', pts: 1, made: true }], null),
+      m2: () => go([{ type: 'shot', pts: 2, made: true }], null, { shot: this.R().shotClock }),
+      m3: () => go([{ type: 'shot', pts: 3, made: true }], null, { shot: this.R().shotClock }),
+      miss: () => go([{ type: 'shot', pts: 2, made: false, generic: true }], { kind: 'block', ctx: { t } }),
+      ftx: () => go([{ type: 'shot', pts: 1, made: false }], { kind: 'rebound', ctx: { t } }),
+      tov: () => go([{ type: 'tov' }], { kind: 'steal', ctx: { t: 'H' } }, { shot: this.R().shotClock }),
+      foul: () => go([{ type: 'foul' }], { kind: 'fouled', ctx: { t: 'H' } }, this.foulStop()),
+      timeout: () => go([{ type: 'timeout' }], null, { running: false })
+    };
+  }
+  opp(t) { return t === 'H' ? 'A' : 'H'; }
+  tn(t) { return this.short(this.teamOf(t)); }
+  fc(c) { return Math.floor(c / 60) + ':' + String(c % 60).padStart(2, '0'); }
+  newG() { this._g = (this._g || 0) + 1; return this._g; }
+  derive() {
+    const L = !!this.state.live, st = {}, score = L ? { H: 0, A: 0 } : { H: 104, A: 101 }, tf = L ? { H: 0, A: 0 } : { H: 4, A: 5 }, court = { H: this.startCourt('H'), A: this.startCourt('A') }, after = [];
+    ['H', 'A'].forEach(t => this.rost(t).forEach(p => { st[t + p[0]] = { pts: p[3], pf: p[4] }; }));
+    this.state.events.forEach(e => {
+      const k = e.t + e.p;
+      if (e.type === 'shot' && e.made) { score[e.t] += e.pts; if (st[k]) st[k].pts += e.pts; }
+      if (e.type === 'foul') { if (st[k]) st[k].pf++; if (e.period == null || e.period === this.state.period) tf[e.t]++; }
+      if (e.type === 'sub') court[e.t] = court[e.t].map(n => n === e.out ? e.in : n);
+      after.push(score.H + '–' + score.A);
+    });
+    return { st, score, tf, court, after };
+  }
+  fmt(e) {
+    const L = this.last(e.t, e.p);
+    switch (e.type) {
+      case 'shot': if (e.generic) return `${L} misses a shot`; return e.pts === 1 ? `${L} ${e.made ? 'makes' : 'misses'} free throw` : `${L} ${e.made ? 'makes' : 'misses'} ${e.pts}PT${e.ft != null ? ' (' + e.ft + ' ft)' : ''}${e.fb ? ' · fast break' : ''}`;
+      case 'ast': return `Assist: ${L}`;
+      case 'blk': return `Blocked by ${L}`;
+      case 'reb': return e.p == null ? `${this.tn(e.t)} team rebound` : `${e.off ? 'Off.' : 'Def.'} rebound: ${L}`;
+      case 'tov': return `${L} turnover`;
+      case 'stl': return `Steal: ${L}`;
+      case 'foul': return `Foul on ${L}`;
+      case 'sub': return `${this.last(e.t, e.in)} in for ${this.last(e.t, e.out)}`;
+      case 'timeout': return `${this.tn(e.t)} timeout`;
+    }
+    return '';
+  }
+  tag(e) { return e.type === 'shot' ? (e.made ? (e.pts === 1 ? 'FT' : e.pts + 'PT') : 'MISS') : ({ ast: 'AST', blk: 'BLK', reb: 'REB', tov: 'TOV', stl: 'STL', foul: 'FOUL', sub: 'SUB', timeout: 'TIMEOUT' })[e.type]; }
+  log(evs, chain, extra) { this.setState(s => ({ events: [...s.events, ...evs.map(e => ({ ...e, clock: s.clock, period: s.period }))], chain, pending: null, ...(extra || {}) })); }
+  startShot(src, t, p, pts, made, loc) {
+    const g = this.newG(), ev = { g, type: 'shot', t, p, pts, made, ...(loc || {}) };
+    let chain = null;
+    if (made && pts > 1 && this.R().askAst && !(src === 'so' && t === 'A')) chain = { src, g, kind: 'assist', ctx: { t, p } };
+    else if (made) chain = null;
+    else if (!made && pts > 1) chain = { src, g, kind: 'block', ctx: { t } };
+    else if (!made) chain = { src, g, kind: 'rebound', ctx: { t } };
+    if (pts > 1 && this.R().askFb) chain = { src, g, kind: 'fastbreak', ctx: { t, made, next: chain } };
+    this.log([ev], chain, made ? { shot: this.R().shotClock } : {});
+  }
+  act(src, t, p) {
+    const busy = () => !!this.state.chain;
+    const shot = (pts, made) => () => { if (!busy()) this.startShot(src, t, p, pts, made); };
+    const one = (type, x, extra) => () => { if (!busy()) this.log([{ g: this.newG(), type, t, p, ...(x || {}) }], null, extra); };
+    const chained = (type, kind, ctxT, extra) => () => { if (busy()) return; const g = this.newG(); this.log([{ g, type, t, p }], { src, g, kind, ctx: { t: ctxT } }, extra); };
+    return {
+      m2: shot(2, true), x2: shot(2, false), m3: shot(3, true), x3: shot(3, false), m1: shot(1, true), x1: shot(1, false),
+      oreb: one('reb', { off: true }, { shot: this.R().shotReset }), dreb: one('reb', { off: false }, { shot: this.R().shotClock }),
+      ast: one('ast'), stl: one('stl', null, { shot: this.R().shotClock }), blk: one('blk'),
+      tov: src === 'so' ? one('tov', null, { shot: this.R().shotClock }) : chained('tov', 'steal', this.opp(t), { shot: this.R().shotClock }),
+      foul: src === 'so' ? chained('foul', 'ftCount', this.opp(t), this.foulStop()) : chained('foul', 'fouled', this.opp(t), this.foulStop()),
+      sub: () => { if (!busy()) this.setState({ chain: { src, g: null, kind: 'sub', ctx: { t, p } }, pending: null }); },
+      timeout: () => { if (!busy()) this.log([{ g: this.newG(), type: 'timeout', t, p: null }], null, { running: false }); }
+    };
+  }
+  chainView(dv) {
+    const c = this.state.chain; if (!c) return null;
+    const d = this.data(), g = c.g, x = c.ctx, solo = c.src === 'so', team = t => solo && t === 'A';
+    const P = (t, n, go, sub) => ({ label: '#' + n + ' ' + this.last(t, n), sub: sub || this.tn(t), go, bg: t === 'H' ? '#1E7A46' : '#FFFFFF', fg: t === 'H' ? '#FFFFFF' : '#111311', bd: t === 'H' ? '#1E7A46' : '#FFFFFF', span: 'auto' });
+    const N = (label, go, sub) => ({ label, sub: sub || '', go, bg: 'transparent', fg: '#FFFFFF', bd: '#6B6862', span: 'span 2' });
+    const B = (label, go, sub) => ({ label, sub: sub || '', go, bg: '#1E7A46', fg: '#FFFFFF', bd: '#1E7A46', span: 'auto' });
+    const W = (label, go, sub) => ({ label, sub: sub || '', go, bg: '#FFFFFF', fg: '#111311', bd: '#FFFFFF', span: 'auto' });
+    const push = (evs, next, extra) => this.log(evs.map(e => ({ g, ...e })), next ? { src: c.src, g, ...next } : null, extra);
+    let title = '', opts = [];
+    switch (c.kind) {
+      case 'fastbreak': {
+        title = 'Was it a fast break?';
+        const setFb = fb => this.setState(st => ({ events: st.events.map(e => e.g === g && e.type === 'shot' ? { ...e, fb } : e), chain: x.next }));
+        opts = [B('Yes — fast break', () => setFb(true), x.made ? 'Scored in transition' : 'Missed in transition'), W('No', () => setFb(false), 'Half-court play')];
+        break;
+      }
+      case 'assist':
+        title = 'Assisted by?';
+        opts = dv.court[x.t].filter(n => n !== x.p).map(n => P(x.t, n, () => push([{ type: 'ast', t: x.t, p: n }], null), 'Assist'))
+          .concat([N('No assist', () => push([], null), 'Unassisted')]);
+        break;
+      case 'block': {
+        const o = this.opp(x.t); title = 'Was it blocked?';
+        opts = (team(o) ? [W('Blocked by ' + this.tn(o), () => push([{ type: 'blk', t: o, p: null }], { kind: 'rebound', ctx: { t: x.t } }), 'Team-level, no player')] : dv.court[o].map(n => P(o, n, () => push([{ type: 'blk', t: o, p: n }], { kind: 'rebound', ctx: { t: x.t } }), 'Block')))
+          .concat([N('Not blocked', () => push([], { kind: 'rebound', ctx: { t: x.t } }), 'Go to rebound')]);
+        break;
+      }
+      case 'rebound': {
+        const o = this.opp(x.t); title = 'Who got the rebound?';
+        const mk = (t, off) => team(t) ? [W(this.tn(t) + ' rebound', () => push([{ type: 'reb', t, p: null, off }], null, { shot: off ? this.R().shotReset : this.R().shotClock }), (off ? 'Offensive' : 'Defensive') + ' · no player')] : dv.court[t].map(n => P(t, n, () => push([{ type: 'reb', t, p: n, off }], null, { shot: off ? this.R().shotReset : this.R().shotClock }), off ? 'Offensive' : 'Defensive'));
+        opts = [...mk(x.t, true), ...mk(o, false),
+          ...(team(x.t) ? [] : [W(this.tn(x.t) + ' team', () => push([{ type: 'reb', t: x.t, p: null, off: true }], null, { shot: this.R().shotReset }), 'Team rebound · off.')]),
+          ...(team(o) ? [] : [W(this.tn(o) + ' team', () => push([{ type: 'reb', t: o, p: null, off: false }], null, { shot: this.R().shotClock }), 'Team rebound · def.')]),
+          N('Skip', () => push([], null), 'End of period / no rebound')];
+        break;
+      }
+      case 'steal':
+        title = 'Stolen by?';
+        opts = dv.court[x.t].map(n => P(x.t, n, () => push([{ type: 'stl', t: x.t, p: n }], null), 'Steal'))
+          .concat([N('No steal', () => push([], null), 'Out of bounds, travel, violation')]);
+        break;
+      case 'fouled':
+        title = 'Who was fouled?';
+        opts = dv.court[x.t].map(n => P(x.t, n, () => this.setState({ chain: { ...c, kind: 'ftCount', ctx: { t: x.t, p: n } } })))
+          .concat([N('No free throws', () => push([], null), 'Non-shooting foul, not in bonus')]);
+        break;
+      case 'ftCount':
+        title = 'Free throws for ' + this.last(x.t, x.p) + '?';
+        opts = [1, 2, 3].map(k => B(k + ' FT', () => this.setState({ chain: { ...c, kind: 'ft', ctx: { ...x, i: 1, n: k } } }), k === 1 ? 'And-one / technical' : k === 2 ? 'Shooting foul' : 'Fouled on a 3'))
+          .concat([N('No free throws', () => push([], null))]);
+        break;
+      case 'ft': {
+        title = `FT ${x.i} of ${x.n} · ${x.p == null ? this.tn(x.t) : '#' + x.p + ' ' + this.last(x.t, x.p)}`;
+        const nxt = made => x.i < x.n ? { kind: 'ft', ctx: { ...x, i: x.i + 1 } } : (made ? null : { kind: 'rebound', ctx: { t: x.t } });
+        opts = [B('Made', () => push([{ type: 'shot', t: x.t, p: x.p, pts: 1, made: true }], nxt(true)), '+1'),
+          W('Missed', () => push([{ type: 'shot', t: x.t, p: x.p, pts: 1, made: false }], nxt(false)), x.i < x.n ? 'Next free throw' : 'Then: rebound')];
+        break;
+      }
+      case 'sub': {
+        title = 'Who comes in for ' + this.last(x.t, x.p) + '?';
+        const bench = this.rost(x.t).filter(p => !dv.court[x.t].includes(p[0]));
+        opts = bench.map(p => P(x.t, p[0], () => this.log([{ g: this.newG(), type: 'sub', t: x.t, p: x.p, in: p[0], out: x.p }], null, { [c.src + 'Sel']: p[0] }), p[2] + ' · ' + dv.st[x.t + p[0]].pts + ' PTS · ' + dv.st[x.t + p[0]].pf + ' PF'))
+          .concat([N('Cancel', () => this.setState({ chain: null }))]);
+        break;
+      }
+    }
+    const soFar = this.state.events.filter(e => g != null && e.g === g).map(e => ({ t: this.fmt(e) }));
+    return { title, opts, soFar, step: soFar.length + 1, src: c.src };
+  }
+  tiles(team, dv, sel, key) {
+    const d = this.data();
+    return dv.court[team].map(n => { const p = this.P(team, n), s = dv.st[team + n] || { pts: 0, pf: 0 }, on = n === sel; return { num: n, last: p[1], first: p[5] || '', pos: p[2] || '–', pts: s.pts, pf: s.pf, bg: on ? '#1E7A46' : '#FFFFFF', fg: on ? '#FFFFFF' : '#111311', sub: on ? '#D6EBDD' : '#6B6862', bd: on ? '#1E7A46' : '#E4DCCF', pfBg: s.pf >= this.R().foulOut ? '#111311' : on ? 'rgba(0,0,0,.2)' : '#EFE9DF', pfC: s.pf >= this.R().foulOut || on ? '#FFFFFF' : '#6B6862', pick: () => this.setState({ [key]: n }) }; });
+  }
+  seg(cur, key, sel, dv) {
+    const on = t => cur === t, first = t => dv ? dv.court[t][0] : 0;
+    return { H: () => this.setState({ [key]: 'H', [sel]: first('H'), pending: null }), A: () => this.setState({ [key]: 'A', [sel]: first('A'), pending: null }), HBg: on('H') ? '#1E7A46' : 'transparent', HFg: on('H') ? '#FFFFFF' : '#111311', ABg: on('A') ? '#111311' : 'transparent', AFg: on('A') ? '#FFFFFF' : '#111311' };
+  }
+  renderVals() {
+    const d = this.data(), s = this.state, dv = this.derive(), G = d.G, K = d.K;
+    const filt = this.props.shotFilter ?? 'All';
+    const f = a => filt === 'All' ? a : a.filter(x => filt === 'Made' ? x.made : !x.made);
+    const selOf = (t, n) => dv.court[t].includes(n) ? n : dv.court[t][0];
+    const trSel = selOf(s.trTeam, s.trSel), phSel = selOf(s.phTeam, s.phSel), soSel = selOf('H', s.soSel ?? 7), pcSel = selOf(s.pcTeam || 'H', s.pcSel ?? 7);
+    const tr = this.seg(s.trTeam, 'trTeam', 'trSel', dv), ph = this.seg(s.phTeam, 'phTeam', 'phSel', dv), sc = this.seg(s.scTeam, 'scTeam', 'x');
+    const scShots = s.scTeam === 'H' ? d.sH : d.sA, scBox = s.scTeam === 'H' ? d.bH : d.bA;
+    const made = scShots.filter(x => x.made).length;
+    const color = t => t === 'H' ? G : K;
+    const logged = s.events.filter(e => e.type === 'shot' && e.x != null && e.t === s.trTeam).map(e => ({ x: e.x, y: e.y, made: e.made, c: color(e.t) }));
+    const trShots = [...(s.trTeam === 'H' ? d.sH.slice(0, 64) : d.sA.slice(0, 60)), ...logged];
+    // grouped feed
+    const groups = [], byG = {};
+    s.events.forEach((e, i) => { if (!byG[e.g]) { byG[e.g] = { evs: [] }; groups.push(byG[e.g]); } byG[e.g].evs.push(e); byG[e.g].last = i; });
+    const newRows = groups.slice().reverse().map(gr => {
+      const e0 = gr.evs[0], pts = gr.evs.filter(e => e.type === 'shot' && e.made).reduce((a, e) => a + e.pts, 0), scg = pts > 0, rest = gr.evs.slice(1).map(e => this.fmt(e));
+      return { clock: this.fc(e0.clock), color: color(e0.t), abbr: e0.t === 'H' ? 'SCP' : 'SLB', title: this.fmt(e0), tag: this.tag(e0), detail: rest.join(' · '), detailSep: rest.length ? ' · ' : '', score: dv.after[gr.last], pts: '+' + pts, scoring: scg, tw: scg ? 700 : 500, sw: scg ? 800 : 600, sc: scg ? K : '#6B6862', summary: gr.evs.map(e => this.fmt(e)).join(' → ') };
+    });
+    const feed = [...newRows, ...d.pbp.map(r => ({ ...r, summary: r.title + (r.detail ? ' → ' + r.detail : '') }))];
+    const pd = s.pending;
+    const pv = src => pd && pd.src === src ? { on: true, l: (pd.x / 5) + '%', t: (pd.y / 4.7) + '%', ...(() => {
+      const W = pd.src === 'so' ? 290 : 236, H = pd.src === 'so' ? 250 : 180, xp = pd.x / 5, yp = pd.y / 4.7;
+      if (pd.x > 140 && pd.x < 360) {
+        const pl = `clamp(8px, calc(${xp}% - ${W / 2}px), calc(100% - ${W + 8}px))`;
+        const pt = pd.y > 235 ? `max(8px, calc(${yp}% - ${H + 26}px))` : `min(calc(100% - ${H + 8}px), calc(${yp}% + 26px))`;
+        return { pl, pt };
+      }
+      return { pl: pd.x >= 360 ? `max(8px, calc(${xp}% - ${W + 26}px))` : `min(calc(100% - ${W + 8}px), calc(${xp}% + 26px))`, pt: `clamp(8px, calc(${yp}% - 64px), calc(100% - ${H + 8}px))` };
+    })(), label: (pd.three ? '3PT' : '2PT') + ' · ' + pd.ft + ' ft' } : { on: false };
+    const pend = pv('tr'), pendSo = pv('so'), pendPc = pv('pc');
+    const pcT = s.pcTeam || 'H', pcSeg = this.seg(pcT, 'pcTeam', 'pcSel', dv);
+    const ch = this.chainView(dv);
+    const trL = this.P(s.trTeam, trSel), phL = this.P(s.phTeam, phSel);
+    return {
+      days: d.days, gameGroups: d.gameGroups, pbp: feed, recent: feed.slice(0, 4), lastSummary: feed[0].summary,
+      scoreH: dv.score.H, scoreA: dv.score.A, clockStr: this.fc(s.clock), shotClock: s.shot,
+      ...this.clockCtl(dv), periodLbl: this.pl(s.period),
+      tfHStr: 'Fouls ' + dv.tf.H + ' · TO left ' + this.toLeft('H') + (dv.tf.A >= this.R().bonus ? ' · Bonus' : ''), tfAStr: 'Fouls ' + dv.tf.A + ' · TO left ' + this.toLeft('A') + (dv.tf.H >= this.R().bonus ? ' · Bonus' : ''),
+      hAbbr: this.teamOf('H').abbr, aAbbr: this.teamOf('A').abbr, hShort: this.tn('H'), aShort: this.tn('A'), hUp: this.tn('H').toUpperCase(), aUp: this.tn('A').toUpperCase(),
+      wz: this.wizard(), tm: this.teamsView(),
+      trPlayers: this.tiles(s.trTeam, dv, trSel, 'trSel'), trSelNum: trSel, trSelLast: trL[1], trTeamName: this.tn(s.trTeam),
+      trH: tr.H, trA: tr.A, trHBg: tr.HBg, trHFg: tr.HFg, trABg: tr.ABg, trAFg: tr.AFg,
+      trAct: this.act('tr', s.trTeam, trSel), phAct: this.act('ph', s.phTeam, phSel),
+      trShots: f(trShots), trShotCount: trShots.length, padOrder: (this.props.padSide ?? 'Right') === 'Left' ? -1 : 0,
+      courtTap: e => this.tapAt(e, 'tr'), courtTapSo: e => this.tapAt(e, 'so'),
+      stop: e => e.stopPropagation(),
+      pend, pendSo,
+      pendMade: () => this.pendShot(true, s, trSel, soSel, pcSel), pendMiss: () => this.pendShot(false, s, trSel, soSel, pcSel),
+      soPlayers: this.tiles('H', dv, soSel, 'soSel'), soSelNum: soSel, soSelLast: this.P('H', soSel)[1], soAct: this.act('so', 'H', soSel), oppAct: this.oppAct(),
+      soShots: f([...d.sH.slice(0, 64), ...s.events.filter(e => e.type === 'shot' && e.x != null && e.t === 'H').map(e => ({ x: e.x, y: e.y, made: e.made, c: G }))]),
+      soChain: !!ch && ch.src === 'so', soNoChain: !(ch && ch.src === 'so'),
+      pcChain: !!ch && ch.src === 'pc', pendPc, courtTapPc: e => this.tapAt(e, 'pc'),
+      pcPlayers: this.tiles(pcT, dv, pcSel, 'pcSel'), pcSelNum: pcSel, pcSelLast: this.P(pcT, pcSel)[1], pcAct: this.act('pc', pcT, pcSel),
+      pcH: pcSeg.H, pcA: pcSeg.A, pcHBg: pcSeg.HBg, pcHFg: pcSeg.HFg, pcABg: pcSeg.ABg, pcAFg: pcSeg.AFg,
+      pcShots: f([...(pcT === 'H' ? d.sH.slice(0, 64) : d.sA.slice(0, 60)), ...s.events.filter(e => e.type === 'shot' && e.x != null && e.t === pcT).map(e => ({ x: e.x, y: e.y, made: e.made, c: color(e.t) }))]),
+      pendCancel: () => this.setState({ pending: null }),
+      ch: ch || { title: '', opts: [], soFar: [], step: 1 },
+      trChain: !!ch && ch.src === 'tr', trNoChain: !(ch && ch.src === 'tr'), phChain: !!ch && ch.src === 'ph',
+      chainDone: () => this.setState({ chain: null }),
+      chainCancel: () => this.setState(x => ({ events: x.chain && x.chain.g != null ? x.events.filter(e => e.g !== x.chain.g) : x.events, chain: null })),
+      undo: () => this.setState(x => { if (!x.events.length) return null; const g = x.events[x.events.length - 1].g; return { events: x.events.filter(e => e.g !== g), chain: null, pending: null }; }),
+      phPlayers: this.tiles(s.phTeam, dv, phSel, 'phSel'), phSelNum: phSel, phSelLast: phL[1],
+      phH: ph.H, phA: ph.A, phHBg: ph.HBg, phHFg: ph.HFg, phABg: ph.ABg, phAFg: ph.AFg,
+      boxTeams: [d.bH, d.bA],
+      scH: sc.H, scA: sc.A, scHBg: sc.HBg, scHFg: sc.HFg, scABg: sc.ABg, scAFg: sc.AFg,
+      scShots: f(scShots), scColor: s.scTeam === 'H' ? G : K, scZones: d.zones(scShots),
+      scPlayers: [...scBox.starters, ...scBox.bench], scSummary: made + '/' + scShots.length + ' FG · ' + (made / scShots.length * 100).toFixed(1) + '%',
+      flowArea: d.flowArea, maxH: d.maxH, maxA: d.maxA, compare: d.compare, perf: d.perf,
+      splits: d.splits, okPlays: d.okPlays, okShots: f(d.okShots)
+    };
+  }
+}
+</script>
+</body>
+</html>

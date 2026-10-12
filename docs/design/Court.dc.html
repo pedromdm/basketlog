@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:relative;width:100%;aspect-ratio:500/470;background-color:#D9A66B;background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 21px, rgba(110,62,22,.22) 21px 22px), repeating-linear-gradient(90deg, rgba(255,240,220,.08) 0 70px, rgba(120,70,30,.08) 70px 150px, rgba(0,0,0,0) 150px 230px);overflow:hidden">
+<svg viewBox="0 0 500 470" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+<g fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-opacity="0.95">
+<rect x="170" y="0" width="160" height="190" fill="#1E7A46" fill-opacity="0.9"></rect>
+<circle cx="250" cy="190" r="60"></circle>
+<path d="M210 52.5 A40 40 0 0 0 290 52.5"></path>
+<path d="M30 0 L30 140 A237.5 237.5 0 0 0 470 140 L470 0"></path>
+<line x1="220" y1="40" x2="280" y2="40" stroke-width="3.5"></line>
+<circle cx="250" cy="52.5" r="7.5"></circle>
+<path d="M190 470 A60 60 0 0 1 310 470"></path>
+<rect x="1.5" y="1.5" width="497" height="467"></rect>
+</g>
+<sc-for list="{{ dots }}" as="d" hint-placeholder-count="0">
+<circle cx="{{ d.x }}" cy="{{ d.y }}" r="{{ d.r }}" fill="{{ d.fill }}" stroke="{{ d.stroke }}" stroke-width="{{ d.sw }}"></circle>
+</sc-for>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:500,&quot;height&quot;:470},&quot;shots&quot;:{&quot;editor&quot;:null,&quot;default&quot;:[],&quot;tsType&quot;:&quot;{x:number,y:number,made:boolean,c:string}[]&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const dots = (this.props.shots || []).map(s => ({ x: s.x, y: s.y, r: s.made ? 7.5 : 6, fill: s.made ? s.c : 'rgba(255,255,255,0.4)', stroke: s.made ? '#FFFFFF' : s.c, sw: s.made ? 2 : 2.5 }));
+    return { dots };
+  }
+}
+</script>
+</body>
+</html>

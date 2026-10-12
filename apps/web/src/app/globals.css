@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --green: #1e7a46;
+  --green-dark: #145532;
+  --green-light: #4fbf7a;
+  --green-tint: #e2efe6;
+  --ink: #111311;
+  --ink-2: #242624;
+  --ink-3: #3a3c3a;
+  --paper: #f3eee5;
+  --card: #ffffff;
+  --line: #e4dccf;
+  --line-2: #efe9df;
+  --line-3: #cfc5b5;
+  --muted: #6b6862;
+  --muted-on-dark: #b9b4aa;
+  --wood: #d9a66b;
+  --wood-shadow: #b98a52;
+  --wood-text: #3b2610;
+}
+
+/* Keep in sync with packages/ui/src/tokens.ts */
+@theme inline {
+  --color-green: var(--green);
+  --color-green-dark: var(--green-dark);
+  --color-green-light: var(--green-light);
+  --color-green-tint: var(--green-tint);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-muted: var(--muted);
+  --color-muted-on-dark: var(--muted-on-dark);
+  --color-wood: var(--wood);
+  --color-wood-shadow: var(--wood-shadow);
+  --color-wood-text: var(--wood-text);
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow-condensed);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-barlow), sans-serif;
+}

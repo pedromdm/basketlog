@@ -1,0 +1,4 @@
+{
+  "extends": "@basket-log/config/tsconfig.base.json",
+  "include": ["src"]
+}

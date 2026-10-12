@@ -1,0 +1,47 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Repository state
+
+Pre-implementation. The repo currently holds only the design handoff in `docs/design/` (no source code, no git history, no build tooling). Everything below the "Planned" markers comes from `docs/design/IMPLEMENTATION_PLAN.md` and `docs/design/README.md`; read both before starting a phase. Update this file as the real scaffold lands (commands especially).
+
+**Basket Log**: basketball game-event capture for courtside scorekeepers (tablet/phone) plus live and post-game stats viewing for coaches, players and parents. Default matchup in mocks: SCP (home) vs SLB (away).
+
+## Design references
+
+- `docs/design/Basket Log Mockups.dc.html` is the source of truth for look and behaviour. Open it in a browser; it needs `support.js`, `Court.dc.html` and `SiteHeader.dc.html` beside it. These are HTML prototypes to recreate in the target stack, not production code.
+- The prototype's logic class (search `chainView`, `startShot`, `act`, `derive`) is a working reference for the play-chain state machine. Port it into `packages/core` with tests.
+- `docs/design/README.md` has per-screen specs and design tokens (colours, Barlow / Barlow Condensed fonts, radii, court geometry). `docs/design/screenshots/` has one PNG per screen id (1a–1h, 2a, 3a, 4a, 4b). Screen ids are used throughout the docs.
+- Fidelity is high: match tokens exactly, and never use raw hex in components once `packages/ui` tokens exist.
+
+## Planned architecture
+
+TypeScript monorepo (pnpm + Turborepo): `apps/mobile` (Expo / React Native + Expo Router, iOS + Android), `apps/web` (Next.js App Router, public site), `packages/core` (pure TS), `packages/db` (Supabase schema/types/queries), `packages/ui` (tokens + Court, ScoreBug, StatTable), `packages/config`, and `supabase/` (migrations, seed, RLS). Backend is Supabase (Postgres, Auth, Realtime, RLS). Offline queue uses expo-sqlite syncing to Supabase. Tests: Vitest (core), Jest + RNTL (mobile), Playwright (web).
+
+Planned build order: `core` → `db` → mobile tracker → web. Work one phase per session (phases listed in the plan). `core` carries most of the risk, so write its tests first.
+
+### Rules that span many files
+
+- **Event sourcing.** The only source of truth is an append-only list of `GameEvent`s. Score, fouls, lineups, box score, shot chart, play-by-play and recap are all derived (`packages/core/derive.ts`). Never store derived stats as truth.
+- **Undo is a `void` event** referencing `voidsGroupId`. Never UPDATE or DELETE events (RLS should forbid it too).
+- **A play = `groupId`** chaining events (shot → fast break → assist; miss → block → rebound; foul → FTs → rebound). Undo removes the whole group; Cancel removes the in-progress play; Done keeps what was answered.
+- **Chain logic is a pure reducer** in `packages/core/chain.ts`: `(state, action) → { state, emittedEvents, nextPrompt }`. UI only renders prompts and dispatches actions. Chain flows are listed in README "Interactions & behaviour" and plan §2.
+- **Per-side tracking mode** `full | team_only`. In `team_only`, prompts offer only a team-level option for that side and its shots skip location, fast break and assist.
+- **Rules are a snapshot.** `GameRules` (FIBA/NBA/Youth/Custom presets) is copied onto `games.rules` at start, and `game_rosters` snapshots players so later roster edits don't rewrite history. Rules toggles (`askFastBreak`, `askAssist`, `stopClockOnFoul`) change which chain prompts appear.
+- **Client-generated UUID event ids** for idempotent offline sync; `device_seq` locally, `server_seq` assigned by the server.
+- **Court coordinates:** half court 500×470 units (1 unit = 0.1 ft), basket at (250, 52.5). A tap is 3PT if `y < 140 && (x < 30 || x > 470)`, otherwise 3PT if distance from (250, 52.5) > 237.5; feet = distance / 10.
+- **Shot clock:** reset to 24 on made shot, defensive rebound, turnover or steal; reset to 14 on offensive rebound. Fouls and timeouts stop the game clock.
+- **Players:** jersey number unique per team; `display_name` (short name shown in trackers) may repeat and defaults to last name.
+
+## Commands
+
+Phase 0 scaffold is in place (pnpm 10 + Turborepo, `node-linker=hoisted` in `.npmrc` for Metro). Workspace packages are `@basket-log/{web,mobile,core,ui,db,config}`; shared packages export TS source directly (no build step).
+
+- `pnpm install`; `pnpm dev` (all apps); `pnpm lint`; `pnpm typecheck`; `pnpm test`; `pnpm build`
+- One package: `pnpm -F @basket-log/core test` (Vitest; single file: `pnpm -F @basket-log/core exec vitest run src/index.test.ts`)
+- Web: `pnpm -F @basket-log/web dev|build`. Its `typecheck` runs `next typegen` first because `LayoutProps` is a generated global.
+- Mobile: `pnpm -F @basket-log/mobile start` (or `web`/`ios`/`android`); smoke-bundle with `pnpm -F @basket-log/mobile exec expo export --platform web`.
+- Supabase: `supabase/` holds local config and a placeholder migration only; no hosted project is linked yet. `supabase db reset` once the CLI/Docker are set up.
+
+Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css` mirrors them as Tailwind theme variables (keep in sync), and mobile imports them directly.

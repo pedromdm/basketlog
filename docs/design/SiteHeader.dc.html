@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="height:64px;background:#111311;display:flex;align-items:center;gap:40px;padding:0 48px;font-family:'Barlow',sans-serif">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="width:30px;height:30px;border-radius:8px;background:#1E7A46;display:flex;align-items:center;justify-content:center;font:800 italic 16px/1 'Barlow Condensed';color:#FFFFFF">BL</div>
+<div style="font:800 italic 23px/1 'Barlow Condensed';letter-spacing:.02em;color:#FFFFFF;text-transform:uppercase">Basket <span style="color:#4FBF7A">Log</span></div>
+</div>
+<nav style="display:flex;gap:4px;flex:1">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="5">
+<sc-if value="{{ it.on }}"><span style="padding:9px 15px;border-radius:999px;background:#FFFFFF;color:#111311;font:600 14px/1 'Barlow'">{{ it.n }}</span></sc-if>
+<sc-if value="{{ it.off }}"><span style="padding:9px 15px;border-radius:999px;color:#B9B4AA;font:500 14px/1 'Barlow'">{{ it.n }}</span></sc-if>
+</sc-for>
+</nav>
+<div style="display:flex;align-items:center;gap:14px">
+<div style="width:220px;height:36px;border-radius:999px;background:#242624;color:#8F8B83;display:flex;align-items:center;padding:0 16px;font:500 13px/1 'Barlow'">Search teams, players…</div>
+<div style="width:36px;height:36px;border-radius:50%;background:#4FBF7A;color:#111311;display:flex;align-items:center;justify-content:center;font:700 14px/1 'Barlow'">JM</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:64},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Games&quot;,&quot;Live Tracker&quot;,&quot;Teams&quot;,&quot;Players&quot;,&quot;Standings&quot;],&quot;default&quot;:&quot;Games&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'Games';
+    return { items: ['Games', 'Live Tracker', 'Teams', 'Players', 'Standings'].map(n => ({ n, on: n === a, off: n !== a })) };
+  }
+}
+</script>
+</body>
+</html>
