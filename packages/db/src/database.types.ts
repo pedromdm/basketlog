@@ -187,6 +187,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_tokens": {
+                  Row: {
+                    "created_at": string,"id": string,"platform": string,"token": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"platform": string,"token": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"platform"?: string,"token"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"rule_presets": {
                   Row: {
                     "id": string,"name": string,"rules": NonNullable<Json>
@@ -200,6 +214,26 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"team_follows": {
+                  Row: {
+                    "created_at": string,"team_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"team_id": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"team_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "team_follows_team_id_fkey"
+      columns: ["team_id"]
+isOneToOne: false
+      referencedRelation: "teams"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"teams": {
                   Row: {
@@ -227,7 +261,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "can_manage_game":
+            "assign_scorekeeper":
+{ Args: { "p_email": string,"p_game_id": string }; Returns: string
+                           },
+"can_manage_game":
 { Args: { "p_game_id": string }; Returns: boolean
                            },
 "can_view_game":
@@ -247,6 +284,11 @@ isOneToOne: false
                            },
 "is_team_admin":
 { Args: { "p_team_id": string }; Returns: boolean
+                           },
+"list_game_scorekeepers":
+{ Args: { "p_game_id": string }; Returns: {
+              "email": string,"user_id": string
+            }[]
                            }
           }
           Enums: {

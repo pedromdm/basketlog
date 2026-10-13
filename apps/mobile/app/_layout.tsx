@@ -19,6 +19,7 @@ import {
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { usePushRegistration } from '@/lib/push';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -72,6 +73,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { session, loading } = useAuth();
+  usePushRegistration(!!session);
   if (loading) return null;
 
   return (

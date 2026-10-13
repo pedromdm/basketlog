@@ -16,3 +16,5 @@ export function createBasketClient(url: string, key: string, options?: Parameter
 export * from './queries';
 
 export * from './events';
+
+export * from './game-data';

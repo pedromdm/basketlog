@@ -89,3 +89,32 @@ export async function createGame(client: BasketClient, input: NewGameInput): Pro
     }),
   );
 }
+
+export async function assignScorekeeper(client: BasketClient, gameId: string, email: string): Promise<string> {
+  return check(await client.rpc('assign_scorekeeper', { p_game_id: gameId, p_email: email }));
+}
+
+export async function listScorekeepers(client: BasketClient, gameId: string): Promise<{ user_id: string; email: string }[]> {
+  return check(await client.rpc('list_game_scorekeepers', { p_game_id: gameId }));
+}
+
+export async function removeScorekeeper(client: BasketClient, gameId: string, userId: string): Promise<void> {
+  check(await client.from('game_scorekeepers').delete().eq('game_id', gameId).eq('user_id', userId).select());
+}
+
+/** Idempotent: the same device token is stored once. */
+export async function registerPushToken(client: BasketClient, token: string, platform: 'ios' | 'android' | 'web'): Promise<void> {
+  check(await client.from('push_tokens').upsert({ token, platform }, { onConflict: 'token' }).select());
+}
+
+export async function listFollowedTeamIds(client: BasketClient): Promise<string[]> {
+  return check(await client.from('team_follows').select('team_id')).map((r) => r.team_id);
+}
+
+export async function followTeam(client: BasketClient, teamId: string): Promise<void> {
+  check(await client.from('team_follows').upsert({ team_id: teamId }, { onConflict: 'user_id,team_id' }).select());
+}
+
+export async function unfollowTeam(client: BasketClient, teamId: string): Promise<void> {
+  check(await client.from('team_follows').delete().eq('team_id', teamId).select());
+}

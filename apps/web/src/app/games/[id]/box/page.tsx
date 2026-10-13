@@ -23,6 +23,15 @@ export default async function BoxScorePage({ params }: PageProps<"/games/[id]">)
 
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-12 py-8">
+      <div className="flex justify-end">
+        <a
+          href={`/games/${game.id}/box/export`}
+          download
+          className="rounded-full border-[1.5px] border-line-3 px-4 py-2 text-sm font-semibold text-ink hover:bg-paper"
+        >
+          Export CSV
+        </a>
+      </div>
       {(["home", "away"] as const).map((side) => {
         const team = game.teams[side];
         const roster = game.players.filter((p) => p.side === side);
