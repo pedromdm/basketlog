@@ -40,3 +40,11 @@ export const NBA_RULES: GameRules = {
   timeoutMode: 'perGame',
   timeouts: { first: 7, overtime: 2 },
 };
+
+export const YOUTH_RULES: GameRules = {
+  ...FIBA_RULES,
+  preset: 'Youth',
+  periodMinutes: 8,
+  overtimeMinutes: 3,
+  timeouts: { first: 2, second: 2, overtime: 1 },
+};

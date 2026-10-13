@@ -2,6 +2,7 @@ export type Side = 'home' | 'away';
 export type TrackingMode = 'full' | 'team_only';
 export type EventType =
   | 'shot'
+  | 'fb'
   | 'ft'
   | 'ast'
   | 'reb'
@@ -34,6 +35,7 @@ export interface GameEvent {
   x?: number;
   y?: number;
   distanceFt?: number;
+  /** On `fb` events: the answer to "was it a fast break?" for the shot in the same group. */
   fastBreak?: boolean;
   // rebound
   offensive?: boolean;

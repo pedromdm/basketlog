@@ -8,7 +8,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:types": "supabase gen types typescript --local > packages/db/src/database.types.ts",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db"
   },
   "devDependencies": {
     "prettier": "^3.3.0",

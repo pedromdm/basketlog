@@ -37,7 +37,7 @@ Planned build order: `core` → `db` → mobile tracker → web. Work one phase 
 ## `packages/core` (Phase 1, implemented)
 
 - `chain.ts`: `initTracker(config)` then `reduce(state, action, env) -> { state, emittedEvents, nextPrompt }`. `env` injects `newId`/`now`/`userId`, so the reducer stays pure. Prompts are answered with `{ type: 'answer', optionId }`; option ids look like `player:h2`, `off:team`, `def:player:a3`, `yes`/`no`, `none`, `skip`, `made`/`missed`, `1`/`2`/`3`.
-- While a play is open (`state.chain`), actions that start a new play are ignored. `done` keeps what was answered, `cancel` and `undo` void the open play. The fast-break answer is applied before the shot is emitted (the shot is held back), so the event log never needs an edit.
+- While a play is open (`state.chain`), actions that start a new play are ignored. `done` keeps what was answered, `cancel` and `undo` void the open play. The shot is logged on tap; the fast-break answer is a separate `fb` event (`fastBreak: boolean`) in the same group, which `derive` folds into the play text.
 - `derive.ts`: `derive(events, setup)` gives score, per-period team fouls, lineups, box lines, shot dots and play-by-play text. `activeEvents` drops voided groups; it is the one place that interprets `void`.
 - Tests are at the reducer and `derive` seams (`chain.test.ts`, `derive.test.ts`; shared fixtures in `test-helpers.ts`). `classifyShot` (2PT/3PT from a court tap), rules helpers (period labels, timeouts left) and minutes/plus-minus are not built yet.
 
@@ -49,6 +49,8 @@ Phase 0 scaffold is in place (pnpm 10 + Turborepo, `node-linker=hoisted` in `.np
 - One package: `pnpm -F @basket-log/core test` (Vitest; single file: `pnpm -F @basket-log/core exec vitest run src/index.test.ts`)
 - Web: `pnpm -F @basket-log/web dev|build`. Its `typecheck` runs `next typegen` first because `LayoutProps` is a generated global.
 - Mobile: `pnpm -F @basket-log/mobile start` (or `web`/`ios`/`android`); smoke-bundle with `pnpm -F @basket-log/mobile exec expo export --platform web`.
-- Supabase: `supabase/` holds local config and a placeholder migration only; no hosted project is linked yet. `supabase db reset` once the CLI/Docker are set up.
+- Supabase (Phase 2, needs Docker): `npx supabase start`, then `pnpm db:reset` (migrations + `seed.sql`), `pnpm db:test` (pgTAP RLS tests in `supabase/tests/database`), `pnpm db:types` (regenerates `packages/db/src/database.types.ts`; commit the result). No hosted project is linked yet. Seed login: `scorekeeper@basketlog.test` / `password123` (local only).
+- `event_type` enum in `supabase/migrations/*_schema.sql` must match `EventType` in `packages/core/src/types.ts`; a pgTAP test checks it.
+- RLS model: public read for public games; only `game_scorekeepers` insert events (and only while the game is not `final`); no UPDATE/DELETE on `game_events` (privileges revoked plus an append-only trigger). Creating a league/team/game auto-grants the creator admin/scorekeeper via trigger.
 
 Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css` mirrors them as Tailwind theme variables (keep in sync), and mobile imports them directly.

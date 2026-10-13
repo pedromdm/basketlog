@@ -45,8 +45,6 @@ type Step =
 
 export interface Chain {
   groupId: string;
-  /** Events built but not yet emitted (the shot waits for its fast-break answer). */
-  held: GameEvent[];
   step: Step;
 }
 
@@ -165,7 +163,7 @@ function buildPrompt(state: TrackerState, step: Step): Prompt {
         kind: 'fastBreak',
         title: 'Was it a fast break?',
         options: [
-          { id: 'yes', label: 'Yes — fast break' },
+          { id: 'yes', label: 'Yes â€” fast break' },
           { id: 'no', label: 'No' },
         ],
       };
@@ -303,13 +301,9 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
         ? { ...state, shotClockMs: state.rules.shotClock * 1000 }
         : state;
       const step = afterShot(state, action.side, action.playerId, action.points, action.made);
-      if (step?.kind === 'fastBreak') {
-        const chain: Chain = { groupId, held: [event], step };
-        return { state: { ...base, chain }, emittedEvents: [], nextPrompt: buildPrompt(base, step) };
-      }
-      const chain: Chain = { groupId, held: [], step: step ?? { kind: 'fastBreak', next: null } };
-      const emitted = emit(base, [event]);
-      return step ? advance(emitted, chain, [event], step) : idle(emitted, [event]);
+      // The shot is logged immediately; the fast-break answer follows as its own `fb` event.
+      const logged = emit(base, [event]);
+      return step ? advance(logged, { groupId, step }, [event], step) : idle(logged, [event]);
     }
     case 'undo': {
       if (state.chain) return reduce(state, { type: 'cancel' }, env);
@@ -324,7 +318,7 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
     case 'done': {
       const chain = state.chain;
       if (!chain) return idle(state);
-      return idle(emit(state, chain.held), chain.held);
+      return idle(state);
     }
     case 'cancel': {
       const chain = state.chain;
@@ -352,7 +346,7 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
     case 'sub': {
       if (state.tracking[action.side] === 'team_only') return idle(state);
       const step: Step = { kind: 'sub', side: action.side, outId: action.outPlayerId };
-      return advance(state, { groupId: env.newId(), held: [], step }, [], step);
+      return advance(state, { groupId: env.newId(), step }, [], step);
     }
     case 'timeout': {
       const event = makeEvent(state, env, env.newId(), { type: 'timeout', side: action.side });
@@ -371,7 +365,7 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
         state.tracking[fouledSide] === 'full'
           ? { kind: 'fouled', side: fouledSide }
           : { kind: 'ftCount', side: fouledSide, shooterId: null };
-      return advance(next, { groupId, held: [], step }, [event], step);
+      return advance(next, { groupId, step }, [event], step);
     }
     case 'turnover': {
       const groupId = env.newId();
@@ -379,7 +373,7 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
       const next = { ...emit(state, [event]), shotClockMs: state.rules.shotClock * 1000 };
       const stealer = opposite(action.side);
       const step: Step | null = state.tracking[stealer] === 'full' ? { kind: 'steal', side: stealer } : null;
-      return advance(next, { groupId, held: [], step: step ?? { kind: 'steal', side: stealer } }, [event], step);
+      return advance(next, { groupId, step: step ?? { kind: 'steal', side: stealer } }, [event], step);
     }
     case 'ft': {
       const groupId = env.newId();
@@ -389,7 +383,7 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
       const next = emit(state, [event]);
       if (action.made) return idle(next, [event]);
       const step: Step = { kind: 'rebound', side: action.side };
-      return advance(next, { groupId, held: [], step }, [event], step);
+      return advance(next, { groupId, step }, [event], step);
     }
     case 'answer': {
       const chain = state.chain;
@@ -397,9 +391,12 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
       const { step } = chain;
       switch (step.kind) {
         case 'fastBreak': {
-          const held = chain.held.map((e) => (e.type === 'shot' ? { ...e, fastBreak: action.optionId === 'yes' } : e));
-          const next = emit(state, held);
-          return advance(next, { ...chain, held: [] }, held, step.next);
+          const shot = state.events.find((e) => e.groupId === chain.groupId && e.type === 'shot');
+          if (!shot) return idle(state);
+          const event = makeEvent(state, env, chain.groupId, {
+            type: 'fb', side: shot.side, playerId: shot.playerId, fastBreak: action.optionId === 'yes',
+          });
+          return advance(emit(state, [event]), chain, [event], step.next);
         }
         case 'assist': {
           if (!action.optionId.startsWith('player:')) return idle(state);

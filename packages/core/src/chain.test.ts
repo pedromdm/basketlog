@@ -23,12 +23,15 @@ describe('made shot chain', () => {
     const t = setup();
 
     const asked = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: true, x: 250, y: 300, distanceFt: 26 });
+    expect(asked.emittedEvents).toEqual([
+      expect.objectContaining({ type: 'shot', playerId: 'h1', points: 3, made: true, x: 250, y: 300, distanceFt: 26 }),
+    ]);
     expect(asked.nextPrompt).toMatchObject({ kind: 'fastBreak', title: 'Was it a fast break?' });
     expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual(['yes', 'no']);
 
     const assist = t.send({ type: 'answer', optionId: 'yes' });
     expect(assist.emittedEvents).toEqual([
-      expect.objectContaining({ type: 'shot', playerId: 'h1', points: 3, made: true, fastBreak: true, x: 250, y: 300, distanceFt: 26 }),
+      expect.objectContaining({ type: 'fb', side: 'home', playerId: 'h1', fastBreak: true }),
     ]);
     expect(assist.nextPrompt).toMatchObject({ kind: 'assist', title: 'Assisted by?' });
     expect(assist.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h2', 'player:h3', 'player:h4', 'player:h5', 'none']);
@@ -48,7 +51,10 @@ describe('made shot chain', () => {
 
     expect(done.emittedEvents).toEqual([]);
     expect(done.nextPrompt).toBeNull();
-    expect(t.state.events).toEqual([expect.objectContaining({ type: 'shot', fastBreak: false })]);
+    expect(t.state.events).toEqual([
+      expect.objectContaining({ type: 'shot' }),
+      expect.objectContaining({ type: 'fb', fastBreak: false }),
+    ]);
   });
 });
 
@@ -58,7 +64,7 @@ describe('missed shot chain', () => {
     t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: false });
     const block = t.send({ type: 'answer', optionId: 'no' });
 
-    expect(block.emittedEvents).toEqual([expect.objectContaining({ type: 'shot', made: false, fastBreak: false })]);
+    expect(block.emittedEvents).toEqual([expect.objectContaining({ type: 'fb', fastBreak: false })]);
     expect(block.nextPrompt).toMatchObject({ kind: 'block', title: 'Was it blocked?' });
     expect(block.nextPrompt?.options.map((o) => o.id)).toEqual([
       'player:a1', 'player:a2', 'player:a3', 'player:a4', 'player:a5', 'none',
@@ -300,9 +306,18 @@ describe('cancel play', () => {
     expect(r.state.chain).toBeNull();
   });
 
-  it('emits nothing when the play has not logged anything yet', () => {
+  it('voids the shot even when cancelling at the very first question', () => {
     const t = setup();
     t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const r = t.send({ type: 'cancel' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'void', voidsGroupId: t.state.events[0]!.groupId })]);
+    expect(activeEvents(r.state.events)).toEqual([]);
+    expect(r.state.chain).toBeNull();
+  });
+
+  it('emits nothing when the play has not logged anything yet', () => {
+    const t = setup();
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
     const r = t.send({ type: 'cancel' });
     expect(r.emittedEvents).toEqual([]);
     expect(r.state.events).toEqual([]);
@@ -319,15 +334,19 @@ describe('done and busy', () => {
     expect(r.emittedEvents).toEqual([]);
     expect(r.nextPrompt).toBeNull();
     expect(r.state.chain).toBeNull();
-    expect(t.state.events).toEqual([expect.objectContaining({ type: 'shot', made: false, fastBreak: true })]);
+    expect(t.state.events).toEqual([
+      expect.objectContaining({ type: 'shot', made: false }),
+      expect.objectContaining({ type: 'fb', fastBreak: true }),
+    ]);
   });
 
-  it('"Done" before the fast-break answer still saves the shot', () => {
+  it('"Done" before the fast-break answer keeps the shot that was already logged', () => {
     const t = setup();
     t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
     const r = t.send({ type: 'done' });
-    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'shot', made: true })]);
+    expect(r.emittedEvents).toEqual([]);
     expect(r.state.chain).toBeNull();
+    expect(t.state.events).toEqual([expect.objectContaining({ type: 'shot', made: true })]);
   });
 
   it('ignores new plays while one is in progress', () => {
@@ -355,7 +374,7 @@ describe('undo during a play', () => {
   it('with nothing logged yet, it just discards the play in progress', () => {
     const t = setup();
     t.send({ type: 'quick', event: 'ast', side: 'home', playerId: 'h2' });
-    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
     const r = t.send({ type: 'undo' });
     expect(r.emittedEvents).toEqual([]);
     expect(r.state.chain).toBeNull();

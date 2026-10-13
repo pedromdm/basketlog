@@ -77,14 +77,14 @@ const emptyLine = (): PlayerLine => ({
   pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, oreb: 0, dreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
 });
 
-function describeEvent(e: GameEvent, setup: DeriveSetup): string {
+function describeEvent(e: GameEvent, setup: DeriveSetup, fastBreak: boolean): string {
   const name = (id: string | null | undefined) => (id == null ? null : (setup.players[id]?.displayName ?? id));
   const team = setup.teams[e.side].shortName;
   const who = name(e.playerId) ?? team;
   switch (e.type) {
     case 'shot': {
       const where = e.distanceFt === undefined ? '' : ` (${e.distanceFt} ft)`;
-      return `${who} ${e.made ? 'makes' : 'misses'} ${e.points}PT${where}${e.fastBreak ? ' · fast break' : ''}`;
+      return `${who} ${e.made ? 'makes' : 'misses'} ${e.points}PT${where}${fastBreak ? ' · fast break' : ''}`;
     }
     case 'ft': return `${who} ${e.made ? 'makes' : 'misses'} free throw`;
     case 'ast': return `Assist: ${who}`;
@@ -108,6 +108,8 @@ export function derive(events: GameEvent[], setup: DeriveSetup): Derived {
   const shots: ShotDot[] = [];
   const plays: Play[] = [];
   const playByGroup = new Map<string, Play>();
+  // a play is a fast break when its `fb` event answered yes
+  const fastBreakGroups = new Set(live.filter((e) => e.type === 'fb' && e.fastBreak).map((e) => e.groupId));
 
   for (const side of ['home', 'away'] as const) {
     for (const id of [...setup.roster[side].starters, ...setup.roster[side].bench]) players[id] = emptyLine();
@@ -156,8 +158,8 @@ export function derive(events: GameEvent[], setup: DeriveSetup): Derived {
       playByGroup.set(e.groupId, play);
       plays.push(play);
     }
-    const text = describeEvent(e, setup);
-    play.text = play.text ? `${play.text} → ${text}` : text;
+    const text = describeEvent(e, setup, fastBreakGroups.has(e.groupId));
+    if (text) play.text = play.text ? `${play.text} → ${text}` : text;
     if ((e.type === 'shot' || e.type === 'ft') && e.made) play.points += e.points ?? 0;
     play.scoreAfter = { ...score };
   }
