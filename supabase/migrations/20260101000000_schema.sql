@@ -44,10 +44,10 @@ create table public.players (
   position public.position,
   photo_url text,
   active boolean not null default true,
-  created_at timestamptz not null default now(),
-  -- jersey number is unique per team
-  constraint players_team_number_key unique (team_id, number)
+  created_at timestamptz not null default now()
 );
+-- jersey number is unique per team among active players (removed players free their number)
+create unique index players_team_number_key on public.players (team_id, number) where active;
 
 create table public.rule_presets (
   id uuid primary key default gen_random_uuid(),

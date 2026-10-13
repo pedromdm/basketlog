@@ -133,8 +133,9 @@ create policy players_delete on public.players for delete to authenticated
 create policy rule_presets_read on public.rule_presets for select using (true);
 
 -- ---------------------------------------------------------------- games
+-- created_by is checked directly: INSERT ... RETURNING cannot see its own new row through a function.
 create policy games_read on public.games for select
-  using (public.can_view_game(id));
+  using (created_by = auth.uid() or public.can_view_game(id));
 create policy games_insert on public.games for insert to authenticated
   with check (created_by = auth.uid());
 create policy games_update on public.games for update to authenticated

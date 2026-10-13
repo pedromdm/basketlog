@@ -54,3 +54,11 @@ Phase 0 scaffold is in place (pnpm 10 + Turborepo, `node-linker=hoisted` in `.np
 - RLS model: public read for public games; only `game_scorekeepers` insert events (and only while the game is not `final`); no UPDATE/DELETE on `game_events` (privileges revoked plus an append-only trigger). Creating a league/team/game auto-grants the creator admin/scorekeeper via trigger.
 
 Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css` mirrors them as Tailwind theme variables (keep in sync), and mobile imports them directly.
+
+## Phase 2b (teams and game setup)
+
+- `packages/core/src/setup.ts`: `validateRoster` (unique jersey numbers, required names) and `validateNewGame` (feeds the wizard's "Fix before starting" list). A `team_only` side needs no starters.
+- `packages/db/src/queries.ts`: team/player CRUD, `listRulePresets`, and `createGame`, which calls the `create_game()` SQL function (atomic: game row, rules snapshot, roster snapshot, status `live`). Removing a player only sets `active = false`; the jersey-number unique index covers active players only.
+- Web: `/teams` (screen 4b) and `/login` (magic link), Supabase SSR clients in `apps/web/src/lib/supabase`, session refresh in `src/proxy.ts`. Mobile: sign-in (`app/sign-in.tsx`), wizard (`app/new-game.tsx`, logic in `lib/wizard.ts`), placeholder `app/game/[id].tsx` until Phase 3. Both apps read local Supabase URL/key from `.env` (copy `.env.example`).
+- `pnpm install` on Windows can fail on `typescript-eslint` while `rtk` hides it; run `rtk proxy pnpm install`. A clean `node_modules` fixes it.
+- Not verified in a browser/device: magic-link round trip, teams autosave, wizard to Start game. Date field is plain text; Google/Apple buttons are disabled stubs.

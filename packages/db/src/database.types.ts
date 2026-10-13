@@ -233,6 +233,9 @@ isOneToOne: false
 "can_view_game":
 { Args: { "p_game_id": string }; Returns: boolean
                            },
+"create_game":
+{ Args: { "p_away_starters"?: (string)[],"p_away_team_id": string,"p_away_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_competition"?: string,"p_home_starters"?: (string)[],"p_home_team_id": string,"p_home_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_rules": Json,"p_starts_at"?: string,"p_status"?: Database["public"]['Enums']["game_status"],"p_venue"?: string }; Returns: string
+                           },
 "is_game_open":
 { Args: { "p_game_id": string }; Returns: boolean
                            },

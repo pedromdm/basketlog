@@ -12,3 +12,5 @@ export type BasketClient = SupabaseClient<Database>;
 export function createBasketClient(url: string, key: string, options?: Parameters<typeof createClient>[2]): BasketClient {
   return createClient<Database>(url, key, options) as BasketClient;
 }
+
+export * from './queries';

@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(16);
 
 -- fixtures (run as postgres, bypassing RLS)
 insert into auth.users (id, instance_id, aud, role, email) values
@@ -90,6 +90,13 @@ select throws_ok(
   $$insert into public.players (team_id, first_name, last_name, display_name, number)
     values ('00000000-0000-0000-0000-0000000000c1', 'X', 'Y', 'Y', 7)$$,
   '23505', null, 'jersey number is unique per team');
+
+-- a removed (inactive) player frees the number
+update public.players set active = false where team_id = '00000000-0000-0000-0000-0000000000c1' and number = 7;
+select lives_ok(
+  $$insert into public.players (team_id, first_name, last_name, display_name, number)
+    values ('00000000-0000-0000-0000-0000000000c1', 'New', 'Seven', 'Seven', 7)$$,
+  'a removed player frees the jersey number');
 
 select * from finish();
 rollback;

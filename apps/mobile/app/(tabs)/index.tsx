@@ -1,31 +1,29 @@
-import { StyleSheet } from 'react-native';
+import { colors, radius } from '@basket-log/ui';
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+import { Button, font } from '@/components/wizard/kit';
+import { useAuth } from '@/lib/auth';
 
-export default function TabOneScreen() {
+/** Game picker entry point. The list of games arrives with the tracker in Phase 3. */
+export default function GamesScreen() {
+  const router = useRouter();
+  const { session, signOut } = useAuth();
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+    <View style={styles.root}>
+      <Text style={styles.title}>GAMES</Text>
+      <View style={styles.card}>
+        <Text style={styles.body}>Signed in as {session?.user.email}</Text>
+        <Button kind="green" label="New game" onPress={() => router.push('/new-game')} />
+        <Button kind="outline" label="Sign out" onPress={signOut} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
+  root: { flex: 1, backgroundColor: colors.paper, padding: 28, gap: 16 },
+  title: { fontFamily: font.displayItalic, fontSize: 40, color: colors.ink },
+  card: { backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, padding: 20, gap: 12, alignSelf: 'flex-start', minWidth: 320 },
+  body: { fontFamily: font.body, fontSize: 15, color: colors.muted },
 });
