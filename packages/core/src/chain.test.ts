@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { activeEvents } from './derive';
-import { setup } from './test-helpers';
+import { initTracker } from './chain';
+import { FIBA_RULES } from './rules';
+import { ROSTER, setup } from './test-helpers';
 
 describe('made shot', () => {
   it('logs the shot, resets the shot clock and ends the play when follow-up questions are off', () => {
@@ -440,5 +442,22 @@ describe('team-only tracking', () => {
     const r = t.send({ type: 'sub', side: 'away', outPlayerId: 'a1' });
     expect(r.nextPrompt).toBeNull();
     expect(r.state.chain).toBeNull();
+  });
+});
+
+describe('resuming a game', () => {
+  it('seeds the tracker from existing events: keeps them, continues the sequence and the period', () => {
+    const first = setup();
+    first.send({ type: 'setPeriod', period: 2 });
+    first.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    first.send({ type: 'done' });
+    const saved = first.state.events;
+
+    const state = initTracker({
+      gameId: 'g1', rules: FIBA_RULES, tracking: { home: 'full', away: 'full' }, roster: ROSTER, events: saved,
+    });
+    expect(state.events).toEqual(saved);
+    expect(state.period).toBe(2);
+    expect(state.nextSeq).toBe(saved.length + 1);
   });
 });

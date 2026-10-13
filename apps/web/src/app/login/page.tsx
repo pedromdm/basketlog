@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+
+  // the callback route sends failures back here as ?error=callback&reason=...
+  const search = useSyncExternalStore(
+    () => () => {},
+    () => window.location.search,
+    () => "",
+  );
+  const params = new URLSearchParams(search);
+  const callbackError = params.get("error")
+    ? `Sign-in link failed: ${params.get("reason") ?? "unknown error"}. Request a new link and use the newest email, in the same browser and at the same address.`
+    : "";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +59,7 @@ export default function LoginPage() {
         </button>
         {status === "sent" && <p className="mt-3 text-sm text-green">Check your inbox for the sign-in link.</p>}
         {status === "error" && <p className="mt-3 text-sm text-ink">{message}</p>}
+        {status !== "error" && callbackError && <p className="mt-3 text-sm text-ink">{callbackError}</p>}
       </form>
     </main>
   );

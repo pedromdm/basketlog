@@ -62,3 +62,11 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 - Web: `/teams` (screen 4b) and `/login` (magic link), Supabase SSR clients in `apps/web/src/lib/supabase`, session refresh in `src/proxy.ts`. Mobile: sign-in (`app/sign-in.tsx`), wizard (`app/new-game.tsx`, logic in `lib/wizard.ts`), placeholder `app/game/[id].tsx` until Phase 3. Both apps read local Supabase URL/key from `.env` (copy `.env.example`).
 - `pnpm install` on Windows can fail on `typescript-eslint` while `rtk` hides it; run `rtk proxy pnpm install`. A clean `node_modules` fixes it.
 - Not verified in a browser/device: magic-link round trip, teams autosave, wizard to Start game. Date field is plain text; Google/Apple buttons are disabled stubs.
+
+## Phase 3 (mobile tracker)
+
+- `packages/core`: `classifyShot` (court.ts), `periodLabel` / `periodLengthMs` / `canStartNextPeriod` / `timeoutsLeft` (periods.ts); `initTracker({ events })` resumes a game (period and seq follow the saved events).
+- Data layer `apps/mobile/lib/tracker`: `useTracker(gameId)` (contract in `types.ts`) runs the reducer, writes emitted events to a local outbox first (expo-sqlite on native, memory on web via `sqliteStorage.web.ts`), then upserts to `game_events` on `id` with ignore-duplicates (idempotent retries) with backoff and NetInfo. It also owns the 100 ms clock tick and haptics. A period change is not an event; the period is recovered from the last event.
+- Views `apps/mobile/components/tracker` (tablet 1b/2a, phone 3a/1c, Court in react-native-svg) and `app/game/[id].tsx`. Prompt option labels are raw ids; `format.ts` turns them into names.
+- Untested on a device: court tap coordinates, haptics, offline queue, layouts. No Jest for mobile yet; only core logic has unit tests.
+- Known gaps: `finishGame` refuses while events are pending; a crash in the few ms before the outbox write completes could drop one event; team-only "MISS" button logs a 2PT miss.

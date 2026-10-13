@@ -14,6 +14,8 @@ export interface TrackerConfig {
   roster: Record<Side, Lineup>;
   period?: number;
   clockMs?: number;
+  /** Events already logged (resuming a game); the period follows the last one. */
+  events?: GameEvent[];
 }
 
 export interface TrackerState {
@@ -98,17 +100,20 @@ export interface ReduceResult {
 }
 
 export function initTracker(config: TrackerConfig): TrackerState {
+  const events = config.events ?? [];
+  const lastPeriod = events.reduce((max, e) => Math.max(max, e.period), 1);
+  const lastSeq = events.reduce((max, e) => Math.max(max, e.seq), 0);
   return {
     gameId: config.gameId,
     rules: config.rules,
     tracking: config.tracking,
     roster: config.roster,
-    period: config.period ?? 1,
+    period: config.period ?? lastPeriod,
     clockMs: config.clockMs ?? config.rules.periodMinutes * 60_000,
     shotClockMs: config.rules.shotClock * 1000,
     clockRunning: false,
-    events: [],
-    nextSeq: 1,
+    events,
+    nextSeq: lastSeq + 1,
     chain: null,
   };
 }
