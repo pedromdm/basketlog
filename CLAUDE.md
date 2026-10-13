@@ -70,3 +70,11 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 - Views `apps/mobile/components/tracker` (tablet 1b/2a, phone 3a/1c, Court in react-native-svg) and `app/game/[id].tsx`. Prompt option labels are raw ids; `format.ts` turns them into names.
 - Untested on a device: court tap coordinates, haptics, offline queue, layouts. No Jest for mobile yet; only core logic has unit tests.
 - Known gaps: `finishGame` refuses while events are pending; a crash in the few ms before the outbox write completes could drop one event; team-only "MISS" button logs a 2PT miss.
+
+## Phase 4 (public website)
+
+- `packages/core`: `recap.ts` (`lineScore`, `leadStats`, `biggestRuns`; all work on `derive().plays`' running score) and `boxscore.ts` (`teamTotals`, `percentage`, `teamLeaders`, `shotZones`). Minutes and plus/minus are not computed; the box score shows an em dash.
+- `packages/db/src/events.ts`: `toRow`/`fromRow` shared by mobile (outbox/sync) and web.
+- Web routes: `/games` (1a), `/games/[id]` hub layout + play-by-play (1d), `/games/[id]/box` (1e), `/shots` (1f, filters via searchParams), `/recap` (1g), `/players/[id]/games/[gameId]` (1h). `src/lib/game-data.ts` `loadGameView` builds everything from Supabase rows; `getGameView` caches it per request. Pages sit under `cacheComponents`, so request data must be inside `<Suspense>`.
+- Live games: `components/live-refresh.tsx` subscribes to Realtime (`game_events` INSERT, `games` UPDATE) and calls `router.refresh()` (throttled 500 ms). Open Graph image: `app/games/[id]/opengraph-image.tsx`.
+- Known gaps: unknown game ids return HTTP 200 with an empty shell (streaming under cacheComponents) instead of a 404 status; filters on the shot chart are single-select links; pages were checked via rendered HTML and an OG image render, not visually against the screenshots.

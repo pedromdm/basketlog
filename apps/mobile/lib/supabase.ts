@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createBasketClient } from '@basket-log/db';
 
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321';
 const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 
 // Expo's web export renders routes in Node, where AsyncStorage (window.localStorage) does not exist.

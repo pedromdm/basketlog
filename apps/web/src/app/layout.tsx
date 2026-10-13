@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Suspense } from "react";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -26,7 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={<div className="h-16 shrink-0 bg-ink" />}>
+          <SiteHeader />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }
