@@ -1,27 +1,25 @@
 import { colors, radius } from '@basket-log/ui';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { font } from '../wizard/kit';
 import { clockText, lastPlays } from './format';
 import { ActionButton, TeamDot } from './ui';
 import type { ReadyTracker } from './useTrackerUi';
 
-/** Footer chips: the latest plays, newest first (tablet). */
-export function LastPlays({ t }: { t: ReadyTracker }) {
-  const plays = lastPlays(t.derived);
+/** The latest plays as text lines, newest first: clock, team colour bar, play text (tablet right column, under Undo). */
+export function RecentPlays({ t, count = 5 }: { t: ReadyTracker; count?: number }) {
+  const plays = lastPlays(t.derived, count);
   return (
-    <View style={styles.footer}>
-      <Text style={styles.footerLabel}>LAST PLAYS</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>
-        {plays.length === 0 ? <Text style={styles.empty}>No plays yet</Text> : null}
-        {plays.map((p) => (
-          <View key={p.groupId} style={styles.chip}>
-            <TeamDot color={t.game.teams[p.side].color} />
-            <Text style={styles.chipClock}>{clockText(p.clockMs)}</Text>
-            <Text style={styles.chipText}>{p.text}</Text>
-          </View>
-        ))}
-      </ScrollView>
+    <View style={{ gap: 6 }}>
+      <Text style={styles.footerLabel}>LAST {count} PLAYS</Text>
+      {plays.length === 0 ? <Text style={styles.empty}>No plays yet</Text> : null}
+      {plays.map((p) => (
+        <View key={p.groupId} style={styles.recent}>
+          <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: t.game.teams[p.side].color }} />
+          <Text style={styles.recentClock}>{clockText(p.clockMs)}</Text>
+          <Text style={[styles.recentText, p.points > 0 && { fontFamily: font.bodyBold }]}>{p.text}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -62,12 +60,11 @@ export function LastPlayToast({ t, onUndo }: { t: ReadyTracker; onUndo: () => vo
 }
 
 const styles = StyleSheet.create({
-  footer: { height: 60, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20 },
   footerLabel: { fontFamily: font.bodyBold, fontSize: 11, letterSpacing: 1.1, color: colors.muted },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.paper, borderRadius: radius.small, paddingHorizontal: 12, minHeight: 40 },
-  chipClock: { fontFamily: font.bodyBold, fontSize: 13, color: colors.ink },
-  chipText: { fontFamily: font.body, fontSize: 13, color: colors.ink },
   empty: { fontFamily: font.body, fontSize: 13, color: colors.muted },
+  recent: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  recentClock: { fontFamily: font.bodyBold, fontSize: 12, color: colors.muted, width: 38 },
+  recentText: { flex: 1, fontFamily: font.body, fontSize: 13, color: colors.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderRadius: radius.small, padding: 10 },
   rowClock: { fontFamily: font.bodyBold, fontSize: 13, color: colors.muted, width: 40 },
   rowText: { flex: 1, fontFamily: font.body, fontSize: 14, color: colors.ink },

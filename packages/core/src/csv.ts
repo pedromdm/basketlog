@@ -1,5 +1,6 @@
 import { percentage, teamTotals } from './boxscore';
 import type { PlayerLine } from './derive';
+import { formatMinutes, formatPlusMinus, type PlayingTime } from './minutes';
 import type { Side } from './types';
 
 export interface CsvPlayer {
@@ -14,9 +15,11 @@ export interface BoxScoreCsvInput {
   teams: Record<Side, { name: string }>;
   players: CsvPlayer[];
   lines: Record<string, PlayerLine>;
+  /** Minutes and plus/minus; the MIN and +/- columns are blank without it. */
+  playing?: Record<string, PlayingTime>;
 }
 
-const HEADER = ['Team', '#', 'Player', 'Starter', 'PTS', 'FGM', 'FGA', 'FG%', '3PM', '3PA', '3P%', 'FTM', 'FTA', 'FT%', 'REB', 'OREB', 'DREB', 'AST', 'STL', 'BLK', 'TO', 'PF'];
+const HEADER = ['Team', '#', 'Player', 'Starter', 'PTS', 'FGM', 'FGA', 'FG%', '3PM', '3PA', '3P%', 'FTM', 'FTA', 'FT%', 'REB', 'OREB', 'DREB', 'AST', 'STL', 'BLK', 'TO', 'PF', 'MIN', '+/-'];
 
 const cell = (value: string | number): string => {
   const text = String(value);
@@ -35,19 +38,21 @@ function statCells(l: PlayerLine): (string | number)[] {
   ];
 }
 
+const timeCells = (t: PlayingTime | undefined): string[] => (t ? [formatMinutes(t.ms), formatPlusMinus(t.plusMinus)] : ['', '']);
+
 const EMPTY: PlayerLine = { pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, oreb: 0, dreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0 };
 
 /** Box score as CSV: home then away, starters first, one TOTAL row per team. CRLF line endings. */
-export function boxScoreCsv({ teams, players, lines }: BoxScoreCsvInput): string {
+export function boxScoreCsv({ teams, players, lines, playing }: BoxScoreCsvInput): string {
   const rows: (string | number)[][] = [HEADER];
   for (const side of ['home', 'away'] as const) {
     const team = teams[side].name;
     const roster = players.filter((p) => p.side === side);
     const ordered = [...roster.filter((p) => p.starter), ...roster.filter((p) => !p.starter)];
     for (const p of ordered) {
-      rows.push([team, p.number, p.displayName, p.starter ? 'Yes' : 'No', ...statCells(lines[p.id] ?? EMPTY)]);
+      rows.push([team, p.number, p.displayName, p.starter ? 'Yes' : 'No', ...statCells(lines[p.id] ?? EMPTY), ...timeCells(playing?.[p.id])]);
     }
-    rows.push([team, '', 'TOTAL', '', ...statCells(teamTotals(roster.map((p) => lines[p.id] ?? EMPTY)))]);
+    rows.push([team, '', 'TOTAL', '', ...statCells(teamTotals(roster.map((p) => lines[p.id] ?? EMPTY))), '', '']);
   }
   return rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }

@@ -51,7 +51,7 @@ export interface TrackerApi {
   toggleClock: () => void;
   /** Ends the period: dispatches setPeriod(period + 1) and resets the clock when canStartNextPeriod() allows. */
   nextPeriod: () => void;
-  /** Marks the game final (games.status = 'final'). */
+  /** Marks the game final. Offline, it is final locally at once and on the server after the last event syncs. */
   finishGame: () => Promise<void>;
   events: GameEvent[];
 }

@@ -1,19 +1,34 @@
 import { colors } from '@basket-log/ui';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { useEffect } from 'react';
 import { useWindowDimensions, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 
+import { GameOverDialog } from '@/components/tracker/GameOverDialog';
+import { PhoneLandscapeTracker } from '@/components/tracker/PhoneLandscapeTracker';
 import { PhoneTracker } from '@/components/tracker/PhoneTracker';
 import { TabletTracker } from '@/components/tracker/TabletTracker';
 import { isReady } from '@/components/tracker/useTrackerUi';
 import { font } from '@/components/wizard/kit';
 import { useTracker } from '@/lib/tracker';
 
-const TABLET_MIN_WIDTH = 768;
+// Judge the device by its shorter side: a phone in landscape is 852 wide but only 393 tall.
+const TABLET_MIN_SHORT_SIDE = 600;
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isTablet = Math.min(width, height) >= TABLET_MIN_SHORT_SIDE;
   const tracker = useTracker(id);
+
+  // Tablets lock to landscape (court beside the pads); phones rotate freely and get a layout per orientation.
+  useEffect(() => {
+    if (!isTablet) return;
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    };
+  }, [isTablet]);
 
   let body;
   if (tracker.error) {
@@ -31,13 +46,14 @@ export default function GameScreen() {
       </View>
     );
   } else {
-    body = width >= TABLET_MIN_WIDTH ? <TabletTracker t={tracker} /> : <PhoneTracker t={tracker} />;
+    body = isTablet ? <TabletTracker t={tracker} /> : width > height ? <PhoneLandscapeTracker t={tracker} /> : <PhoneTracker t={tracker} />;
   }
 
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ title: 'Tracker', headerShown: false }} />
       {body}
+      {isReady(tracker) ? <GameOverDialog t={tracker} /> : null}
     </View>
   );
 }

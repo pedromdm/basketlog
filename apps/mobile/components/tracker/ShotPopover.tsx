@@ -70,6 +70,7 @@ export function ShotPopover({
               onPress={() => setChosen(id)}
               style={[styles.chip, id === shooter && styles.chipOn]}>
               <Text style={[styles.chipText, id === shooter && { color: colors.ink }]}>{game.players[id]?.number}</Text>
+              <Text numberOfLines={1} style={[styles.chipName, id === shooter && { color: colors.ink }]}>{playerName(game, id)}</Text>
             </Pressable>
           ))}
         </View>
@@ -89,7 +90,8 @@ const styles = StyleSheet.create({
   detail: { fontFamily: font.bodyBold, fontSize: 14, color: colors.greenLight },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
-    minWidth: 48,
+    minWidth: 64,
+    maxWidth: 108,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
@@ -99,5 +101,6 @@ const styles = StyleSheet.create({
     borderColor: colors.muted,
   },
   chipOn: { backgroundColor: colors.card, borderColor: colors.card },
+  chipName: { fontFamily: font.body, fontSize: 11, color: colors.card },
   chipText: { fontFamily: font.displayBold, fontSize: 20, color: colors.card },
 });

@@ -18,6 +18,9 @@
   --wood: #d9a66b;
   --wood-shadow: #b98a52;
   --wood-text: #3b2610;
+  --court-paint: #8a8d8a;
+  --foul-warn: #f59e0b;
+  --foul-out: #d9322b;
 }
 
 /* Keep in sync with packages/ui/src/tokens.ts */
@@ -39,6 +42,9 @@
   --color-wood: var(--wood);
   --color-wood-shadow: var(--wood-shadow);
   --color-wood-text: var(--wood-text);
+  --color-court-paint: var(--court-paint);
+  --color-foul-warn: var(--foul-warn);
+  --color-foul-out: var(--foul-out);
   --font-sans: var(--font-barlow);
   --font-display: var(--font-barlow-condensed);
 }

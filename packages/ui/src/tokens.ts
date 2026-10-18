@@ -16,6 +16,9 @@ export const colors = {
   wood: '#D9A66B',
   woodShadow: '#B98A52',
   woodText: '#3B2610',
+  courtPaint: '#8A8D8A',
+  foulWarn: '#F59E0B',
+  foulOut: '#D9322B',
   loserScoreOnWood: '#5A3A1C',
 } as const;
 

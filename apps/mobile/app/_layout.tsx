@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -31,10 +32,18 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
+// Inert until EXPO_PUBLIC_SENTRY_DSN is set (EAS env), so local runs send nothing.
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: !!process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
+  tracesSampleRate: 0.1,
+});
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     Barlow_400Regular,
@@ -68,7 +77,7 @@ export default function RootLayout() {
       <RootLayoutNav />
     </AuthProvider>
   );
-}
+});
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();

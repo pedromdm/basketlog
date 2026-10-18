@@ -12,6 +12,15 @@ export interface GameRules {
   timeouts: { first: number; second?: number; overtime: number };
   askFastBreak: boolean;
   askAssist: boolean;
+  /** Ask "was it blocked?" after a miss. Absent in games saved before this rule existed: treated as true. */
+  askBlock?: boolean;
+  /**
+   * A fouled-out player with no eligible substitute: true (FIBA) he leaves and the team plays with fewer players;
+   * false (NBA: no team goes below five) he stays in. Absent: true.
+   */
+  playShortHanded?: boolean;
+  /** The game cannot go on if a team has fewer than this many players on court (FIBA: one player left = forfeit). Absent: 2. */
+  minPlayersToContinue?: number;
   stopClockOnFoul: boolean;
 }
 
@@ -29,12 +38,17 @@ export const FIBA_RULES: GameRules = {
   timeouts: { first: 2, second: 3, overtime: 1 },
   askFastBreak: true,
   askAssist: true,
+  askBlock: true,
+  playShortHanded: true,
+  minPlayersToContinue: 2,
   stopClockOnFoul: true,
 };
 
 export const NBA_RULES: GameRules = {
   ...FIBA_RULES,
   preset: 'NBA',
+  playShortHanded: false,
+  minPlayersToContinue: 5,
   periodMinutes: 12,
   foulsToFoulOut: 6,
   timeoutMode: 'perGame',

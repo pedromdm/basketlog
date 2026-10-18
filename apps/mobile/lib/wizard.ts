@@ -15,6 +15,8 @@ export interface WizardState {
   venue: string;
   /** YYYY-MM-DD, optional. */
   date: string;
+  /** HH:mm (24 h), optional; without it a dated game starts at 12:00. */
+  time: string;
   rules: GameRules;
   tracking: Record<Side, TrackingMode>;
   starters: Record<Side, string[]>;
@@ -26,6 +28,7 @@ export const initialWizard = (rules: GameRules = FIBA_RULES): WizardState => ({
   competition: '',
   venue: '',
   date: '',
+  time: '',
   rules,
   tracking: { home: 'full', away: 'full' },
   starters: { home: [], away: [] },
@@ -98,6 +101,15 @@ export function toDraft(state: WizardState, teams: TeamWithPlayers[]): GameDraft
 /** The "Fix before starting" list. */
 export const problems = (state: WizardState, teams: TeamWithPlayers[]) => validateNewGame(toDraft(state, teams));
 
+/** ISO start time from a YYYY-MM-DD date and an optional HH:mm time (device time zone); undefined without a valid date. */
+export function startsAtOf(date: string, time: string): string | undefined {
+  const d = date.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return undefined;
+  const t = /^\d{2}:\d{2}$/.test(time.trim()) ? time.trim() : '12:00';
+  const at = new Date(`${d}T${t}:00`);
+  return Number.isNaN(at.getTime()) ? undefined : at.toISOString();
+}
+
 export function toNewGameInput(state: WizardState): NewGameInput {
   const date = state.date.trim();
   return {
@@ -108,7 +120,7 @@ export function toNewGameInput(state: WizardState): NewGameInput {
     starters: state.starters,
     ...(state.competition.trim() ? { competition: state.competition.trim() } : {}),
     ...(state.venue.trim() ? { venue: state.venue.trim() } : {}),
-    ...(/^\d{4}-\d{2}-\d{2}$/.test(date) ? { startsAt: new Date(`${date}T12:00:00`).toISOString() } : {}),
+    ...(startsAtOf(date, state.time) ? { startsAt: startsAtOf(date, state.time) as string } : {}),
   };
 }
 
@@ -126,11 +138,13 @@ export function rulesSummary(r: GameRules): string[] {
     r.timeoutMode === 'perGame'
       ? `${r.timeouts.first} timeouts per game`
       : `${r.timeouts.first}${second} timeouts ${r.timeoutMode === 'perHalf' ? 'per half' : 'per period'}`;
-  const asks = [r.askFastBreak && 'fast break', r.askAssist && 'assist'].filter(Boolean).join(', ');
+  const asks = [r.askFastBreak && 'fast break', r.askAssist && 'assist', r.askBlock !== false && 'block'].filter(Boolean).join(', ');
   return [
     `${r.periods} ${periodWord} x ${r.periodMinutes} min, overtime ${r.overtimeMinutes} min`,
     `${r.playersOnCourt} players on court, foul out at ${r.foulsToFoulOut}, bonus after ${r.teamFoulsBeforeBonus} team fouls`,
     `Shot clock ${r.shotClock}/${r.shotClockResetOffReb}, ${timeouts}`,
     `Asks: ${asks || 'no follow-up questions'}${r.stopClockOnFoul ? '; fouls stop the clock' : ''}`,
+    `The game cannot go on if a team has fewer than ${r.minPlayersToContinue ?? 2} players on court`,
+    r.playShortHanded === false ? 'Fouled out with no substitute: stays in (no team below five)' : 'Fouled out with no substitute: leaves, team plays short',
   ];
 }

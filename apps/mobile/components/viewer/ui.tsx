@@ -60,7 +60,7 @@ export const viewer = StyleSheet.create({
 
 const styles = StyleSheet.create({
   chipRow: { gap: 8, paddingVertical: 2 },
-  chip: { minHeight: 48, paddingHorizontal: 16, justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.line2 },
+  chip: { flexShrink: 0, minHeight: 48, paddingHorizontal: 16, justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.line2 },
   chipActive: { backgroundColor: colors.ink },
   chipText: { fontFamily: font.bodyBold, fontSize: 14, color: colors.ink },
   chipTextActive: { color: colors.card },

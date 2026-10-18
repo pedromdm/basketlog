@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import { percentage, teamTotals, type PlayerLine } from "@basket-log/core";
+import { formatMinutes, formatPlusMinus, percentage, teamTotals, type PlayerLine, type PlayingTime } from "@basket-log/core";
 import { getGameView } from "@/lib/game-view";
 import type { ViewPlayer } from "@/lib/game-data";
 
 const COLUMNS = ["MIN", "PTS", "FG", "3PT", "FT", "REB", "AST", "STL", "BLK", "TO", "PF", "+/-"];
-// Minutes and plus/minus are not derived yet.
 const DASH = "—";
 const frac = (m: number, a: number) => `${m}-${a}`;
 const pct = (m: number, a: number) => {
@@ -12,8 +11,8 @@ const pct = (m: number, a: number) => {
   return p === null ? DASH : `${p.toFixed(1)}%`;
 };
 
-function cells(l: PlayerLine): (string | number)[] {
-  return [DASH, l.pts, frac(l.fgm, l.fga), frac(l.tpm, l.tpa), frac(l.ftm, l.fta), l.oreb + l.dreb, l.ast, l.stl, l.blk, l.tov, l.pf, DASH];
+function cells(l: PlayerLine, t?: PlayingTime): (string | number)[] {
+  return [t ? formatMinutes(t.ms) : DASH, l.pts, frac(l.fgm, l.fga), frac(l.tpm, l.tpa), frac(l.ftm, l.fta), l.oreb + l.dreb, l.ast, l.stl, l.blk, l.tov, l.pf, t ? formatPlusMinus(t.plusMinus) : DASH];
 }
 
 export default async function BoxScorePage({ params }: PageProps<"/games/[id]">) {
@@ -61,7 +60,7 @@ export default async function BoxScorePage({ params }: PageProps<"/games/[id]">)
                 </thead>
                 <tbody>
                   {starters.map((p) => (
-                    <PlayerRow key={p.id} player={p} line={lineOf(p)} />
+                    <PlayerRow key={p.id} player={p} line={lineOf(p)} time={game.playing[p.id]} />
                   ))}
                   {bench.length > 0 && (
                     <>
@@ -69,7 +68,7 @@ export default async function BoxScorePage({ params }: PageProps<"/games/[id]">)
                         <td colSpan={COLUMNS.length + 1} className="px-5 py-2 font-semibold">Bench</td>
                       </tr>
                       {bench.map((p) => (
-                        <PlayerRow key={p.id} player={p} line={lineOf(p)} />
+                        <PlayerRow key={p.id} player={p} line={lineOf(p)} time={game.playing[p.id]} />
                       ))}
                     </>
                   )}
@@ -89,8 +88,8 @@ export default async function BoxScorePage({ params }: PageProps<"/games/[id]">)
   );
 }
 
-function PlayerRow({ player, line }: { player: ViewPlayer; line: PlayerLine | undefined }) {
-  const values = line ? cells(line) : COLUMNS.map(() => DASH);
+function PlayerRow({ player, line, time }: { player: ViewPlayer; line: PlayerLine | undefined; time: PlayingTime | undefined }) {
+  const values = line ? cells(line, time) : COLUMNS.map(() => DASH);
   return (
     <tr className="border-t border-line-2">
       <td className="px-5 py-3 font-semibold">

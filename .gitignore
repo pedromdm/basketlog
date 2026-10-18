@@ -7,3 +7,8 @@ dist
 !.env.example
 supabase/.temp
 *.tsbuildinfo
+
+# cloudflare
+.open-next
+.wrangler
+.playwright-mcp

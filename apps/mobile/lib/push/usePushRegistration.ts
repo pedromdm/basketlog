@@ -1,25 +1,32 @@
 import { registerPushToken } from '@basket-log/db';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { supabase } from '../supabase';
 
-// Show pushes that arrive while the app is open (a live game is exactly when they matter).
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+// Expo Go (SDK 53+) removed remote push, and importing expo-notifications there logs errors that break the
+// route modules. So it is loaded lazily, and never in Expo Go (use a development build to test push).
+const inExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+async function loadNotifications() {
+  const Notifications = await import('expo-notifications');
+  // Show pushes that arrive while the app is open (a live game is exactly when they matter).
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+  return Notifications;
+}
 
 /** Returns the Expo push token, or null (with a console warning) when this device can't get one. */
 async function getPushToken(): Promise<string | null> {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web' || inExpoGo) return null;
   if (!Device.isDevice) {
     console.warn('[push] simulators cannot receive push notifications; skipping registration');
     return null;
@@ -30,6 +37,7 @@ async function getPushToken(): Promise<string | null> {
     return null;
   }
 
+  const Notifications = await loadNotifications();
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Games',

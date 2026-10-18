@@ -1,4 +1,4 @@
-import { boxScoreCsv, percentage, teamTotals, type PlayerLine, type Side } from '@basket-log/core';
+import { boxScoreCsv, formatMinutes, formatPlusMinus, percentage, teamTotals, type PlayerLine, type PlayingTime, type Side } from '@basket-log/core';
 import type { GameView, ViewPlayer } from '@basket-log/db';
 import { colors } from '@basket-log/ui';
 import { useRouter } from 'expo-router';
@@ -15,13 +15,13 @@ const NAME_W = 132;
 const COL_W = 46;
 const WIDE_W = 58;
 const COLUMNS = [
-  { key: 'MIN', w: COL_W }, { key: 'PTS', w: COL_W }, { key: 'FG', w: WIDE_W }, { key: '3PT', w: WIDE_W }, { key: 'FT', w: WIDE_W },
+  { key: 'MIN', w: WIDE_W }, { key: 'PTS', w: COL_W }, { key: 'FG', w: WIDE_W }, { key: '3PT', w: WIDE_W }, { key: 'FT', w: WIDE_W },
   { key: 'REB', w: COL_W }, { key: 'AST', w: COL_W }, { key: 'STL', w: COL_W }, { key: 'BLK', w: COL_W }, { key: 'TO', w: COL_W },
   { key: 'PF', w: COL_W }, { key: '+/−', w: COL_W },
 ] as const;
 
-function cells(l: PlayerLine): string[] {
-  return ['–', String(l.pts), madeOf(l.fgm, l.fga), madeOf(l.tpm, l.tpa), madeOf(l.ftm, l.fta), String(l.oreb + l.dreb), String(l.ast), String(l.stl), String(l.blk), String(l.tov), String(l.pf), '–'];
+function cells(l: PlayerLine, t?: PlayingTime): string[] {
+  return [t ? formatMinutes(t.ms) : '–', String(l.pts), madeOf(l.fgm, l.fga), madeOf(l.tpm, l.tpa), madeOf(l.ftm, l.fta), String(l.oreb + l.dreb), String(l.ast), String(l.stl), String(l.blk), String(l.tov), String(l.pf), t ? formatPlusMinus(t.plusMinus) : '–'];
 }
 
 function Row({ name, values, bold, onPress, divider }: { name: string; values: string[]; bold?: boolean; onPress?: () => void; divider?: boolean }) {
@@ -61,9 +61,9 @@ function TeamTable({ game, side }: { game: GameView; side: Side }) {
               <Text key={c.key} style={[styles.cell, styles.head, { width: c.w }]}>{c.key}</Text>
             ))}
           </View>
-          {starters.map((p) => <Row key={p.id} name={label(p)} values={cells(line(p))} onPress={open(p)} />)}
+          {starters.map((p) => <Row key={p.id} name={label(p)} values={cells(line(p), game.playing[p.id])} onPress={open(p)} />)}
           {bench.length ? <Text style={styles.benchLabel}>BENCH</Text> : null}
-          {bench.map((p) => <Row key={p.id} name={label(p)} values={cells(line(p))} onPress={open(p)} />)}
+          {bench.map((p) => <Row key={p.id} name={label(p)} values={cells(line(p), game.playing[p.id])} onPress={open(p)} />)}
           <Row name="TOTAL" values={cells(totals)} bold divider />
         </View>
       </ScrollView>
@@ -78,6 +78,7 @@ export function BoxScore({ game }: { game: GameView }) {
       teams: { home: { name: game.teams.home.name }, away: { name: game.teams.away.name } },
       players: game.players,
       lines: game.derived.players,
+      playing: game.playing,
     });
     await Share.share({ title: `${game.teams.home.abbr} vs ${game.teams.away.abbr} box score`, message: csv });
   };
@@ -86,7 +87,7 @@ export function BoxScore({ game }: { game: GameView }) {
     <View style={{ gap: 14 }}>
       <TeamTable game={game} side="home" />
       <TeamTable game={game} side="away" />
-      <Text style={viewer.muted}>Minutes and plus/minus are not tracked yet. Tap a player for their game.</Text>
+      <Text style={viewer.muted}>Tap a player for their game.</Text>
       <Button kind="outline" label="Export CSV" onPress={() => void exportCsv()} />
     </View>
   );

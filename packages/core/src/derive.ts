@@ -65,10 +65,13 @@ export function activeEvents(events: GameEvent[]): GameEvent[] {
 /** The players on court for a side after applying every counted substitution. */
 export function courtAfter(starters: string[], events: GameEvent[], side: Side): string[] {
   return activeEvents(events).reduce(
-    (court, e) =>
-      e.type === 'sub' && e.side === side
-        ? court.map((id) => (id === e.outPlayerId ? (e.inPlayerId as string) : id))
-        : court,
+    (court, e) => {
+      if (e.type !== 'sub' || e.side !== side) return court;
+      // a sub without `inPlayerId` is a player leaving with no replacement (fouled out, team plays short)
+      return e.inPlayerId === undefined
+        ? court.filter((id) => id !== e.outPlayerId)
+        : court.map((id) => (id === e.outPlayerId ? e.inPlayerId as string : id));
+    },
     starters,
   );
 }
@@ -93,7 +96,8 @@ function describeEvent(e: GameEvent, setup: DeriveSetup, fastBreak: boolean): st
     case 'tov': return `${who} turnover`;
     case 'stl': return `Steal: ${who}`;
     case 'foul': return `Foul on ${who}`;
-    case 'sub': return `${name(e.inPlayerId)} in for ${name(e.outPlayerId)}`;
+    case 'sub':
+      return e.inPlayerId === undefined ? `${name(e.outPlayerId)} out · no substitute` : `${name(e.inPlayerId)} in for ${name(e.outPlayerId)}`;
     case 'timeout': return `${team} timeout`;
     default: return '';
   }

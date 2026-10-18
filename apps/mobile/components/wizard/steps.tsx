@@ -1,6 +1,7 @@
 import type { GameRules, Side } from '@basket-log/core';
 import type { TeamWithPlayers } from '@basket-log/db';
 import { colors, radius } from '@basket-log/ui';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -16,12 +17,15 @@ import {
   type WizardState,
 } from '@/lib/wizard';
 import { Field, Label, Segmented, Stepper, TeamChip, Title, Toggle, font } from './kit';
+import { DateField, TimeField } from './pickers';
 
 export interface StepProps {
   state: WizardState;
   teams: TeamWithPlayers[];
   presets: { name: string; rules: GameRules }[];
   update: (next: (s: WizardState) => WizardState) => void;
+  /** Narrow screen (phone portrait): columns stack and fields go one per row. */
+  narrow?: boolean;
 }
 
 const SIDES: { side: Side; title: string }[] = [
@@ -29,13 +33,14 @@ const SIDES: { side: Side; title: string }[] = [
   { side: 'away', title: 'Away' },
 ];
 
-export function MatchupStep({ state, teams, update }: StepProps) {
+export function MatchupStep({ state, teams, update, narrow = false }: StepProps) {
+  const col = narrow ? { flex: 0 } : undefined;
   return (
     <View>
       <Title title="Matchup" subtitle="Pick the home and away teams. Teams and rosters are managed on the website." />
-      <View style={{ flexDirection: 'row', gap: 20 }}>
+      <View style={{ flexDirection: narrow ? 'column' : 'row', gap: 20 }}>
         {SIDES.map(({ side, title }) => (
-          <View key={side} style={{ flex: 1, gap: 10 }}>
+          <View key={side} style={{ flex: narrow ? 0 : 1, gap: 10 }}>
             <Label>{title}</Label>
             {teams.map((team) => {
               const selected = state.teamIds[side] === team.id;
@@ -60,10 +65,11 @@ export function MatchupStep({ state, teams, update }: StepProps) {
           </View>
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: 14, marginTop: 22 }}>
-        <Field label="Competition" value={state.competition} onChangeText={(competition) => update((s) => ({ ...s, competition }))} placeholder="League, cup, friendly" />
-        <Field label="Venue" value={state.venue} onChangeText={(venue) => update((s) => ({ ...s, venue }))} placeholder="Arena" />
-        <Field label="Date (YYYY-MM-DD)" value={state.date} onChangeText={(date) => update((s) => ({ ...s, date }))} placeholder="Today" />
+      <View style={{ flexDirection: narrow ? 'column' : 'row', gap: 14, marginTop: 22 }}>
+        <Field {...(col ? { containerStyle: col } : {})} label="Competition" value={state.competition} onChangeText={(competition) => update((s) => ({ ...s, competition }))} placeholder="League, cup, friendly" />
+        <Field {...(col ? { containerStyle: col } : {})} label="Venue" value={state.venue} onChangeText={(venue) => update((s) => ({ ...s, venue }))} placeholder="Arena" />
+        <DateField {...(col ? { containerStyle: col } : {})} label="Date" value={state.date} onChange={(date) => update((s) => ({ ...s, date }))} />
+        <TimeField {...(col ? { containerStyle: col } : {})} label="Time" value={state.time} onChange={(time) => update((s) => ({ ...s, time }))} />
       </View>
     </View>
   );
@@ -91,6 +97,7 @@ export function RulesStep({ state, presets, update }: StepProps) {
         <Stepper label="Period length" unit="min" value={rules.periodMinutes} min={1} max={20} onChange={(periodMinutes) => update((s) => setRule(s, { periodMinutes }))} />
         <Stepper label="Overtime" unit="min" value={rules.overtimeMinutes} min={1} max={10} onChange={(overtimeMinutes) => update((s) => setRule(s, { overtimeMinutes }))} />
         <Stepper label="Players on court" value={rules.playersOnCourt} min={3} max={5} onChange={(playersOnCourt) => update((s) => setRule(s, { playersOnCourt }))} />
+        <Stepper label="Min. players to continue" value={rules.minPlayersToContinue ?? 2} min={1} max={rules.playersOnCourt} onChange={(minPlayersToContinue) => update((s) => setRule(s, { minPlayersToContinue }))} />
         <Stepper label="Fouls to foul out" value={rules.foulsToFoulOut} min={3} max={10} onChange={(foulsToFoulOut) => update((s) => setRule(s, { foulsToFoulOut }))} />
         <Stepper label="Team fouls before bonus" value={rules.teamFoulsBeforeBonus} min={1} max={10} onChange={(teamFoulsBeforeBonus) => update((s) => setRule(s, { teamFoulsBeforeBonus }))} />
         <Stepper label="Shot clock" unit="s" value={rules.shotClock} min={10} max={40} onChange={(shotClock) => update((s) => setRule(s, { shotClock }))} />
@@ -118,7 +125,14 @@ export function RulesStep({ state, presets, update }: StepProps) {
       <Label>Scorekeeper questions</Label>
       <View style={{ gap: 8 }}>
         <Toggle label="Ask: was it a fast break?" value={rules.askFastBreak} onChange={(askFastBreak) => update((s) => setRule(s, { askFastBreak }))} />
+        <Toggle label="Ask: was it blocked?" value={rules.askBlock !== false} onChange={(askBlock) => update((s) => setRule(s, { askBlock }))} />
         <Toggle label="Ask: who assisted?" value={rules.askAssist} onChange={(askAssist) => update((s) => setRule(s, { askAssist }))} />
+        <Toggle
+          label="Fouled-out player leaves if no substitute"
+          hint="On: the team plays short (FIBA). Off: he stays in, no team goes below five (NBA)."
+          value={rules.playShortHanded !== false}
+          onChange={(playShortHanded) => update((s) => setRule(s, { playShortHanded }))}
+        />
         <Toggle label="Fouls stop the game clock" value={rules.stopClockOnFoul} onChange={(stopClockOnFoul) => update((s) => setRule(s, { stopClockOnFoul }))} />
       </View>
 
@@ -142,26 +156,37 @@ export function RulesStep({ state, presets, update }: StepProps) {
   );
 }
 
+const TILE_MIN = 150;
+const TILE_GAP = 8;
+const COLUMN_GAP = 24;
+
 export function LineupsStep({ state, teams, update }: StepProps) {
   const n = state.rules.playersOnCourt;
+  // Tiles are sized from the measured width, not from percentages: teams go side by side only when each column fits
+  // two tiles, otherwise they stack, and a column holds as many tiles of at least TILE_MIN as fit, sharing the width.
+  const [width, setWidth] = useState(0);
+  const sideBySide = width >= 2 * (2 * TILE_MIN + TILE_GAP) + COLUMN_GAP;
+  const columnWidth = sideBySide ? (width - COLUMN_GAP) / 2 : width;
+  const perRow = Math.max(1, Math.floor((columnWidth + TILE_GAP) / (TILE_MIN + TILE_GAP)));
+  const tileWidth = Math.floor((columnWidth - TILE_GAP * (perRow - 1)) / perRow);
   return (
-    <View>
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Title title="Lineups" subtitle={`Tap players to mark the starters. The count follows "Players on court" in Rules (${n}).`} />
-      <View style={{ flexDirection: 'row', gap: 24 }}>
+      <View style={{ flexDirection: sideBySide ? 'row' : 'column', gap: COLUMN_GAP }}>
         {SIDES.map(({ side, title }) => {
           const team = teamOf(teams, state.teamIds[side]);
           const picked = state.starters[side];
-          if (!team) return <View key={side} style={{ flex: 1 }} />;
+          if (!team) return <View key={side} style={{ flex: sideBySide ? 1 : 0 }} />;
           if (state.tracking[side] === 'team_only') {
             return (
-              <View key={side} style={{ flex: 1 }}>
+              <View key={side} style={{ flex: sideBySide ? 1 : 0 }}>
                 <Text style={styles.teamName}>{team.name}</Text>
                 <Text style={styles.note}>{title} is tracked team-only: no lineup needed.</Text>
               </View>
             );
           }
           return (
-            <View key={side} style={{ flex: 1 }}>
+            <View key={side} style={{ flex: sideBySide ? 1 : 0 }}>
               <View style={styles.lineupHeader}>
                 <TeamChip abbr={team.abbr} color={team.color_primary} size={32} />
                 <Text style={[styles.teamName, { flex: 1 }]}>{team.name.toUpperCase()}</Text>
@@ -172,6 +197,7 @@ export function LineupsStep({ state, teams, update }: StepProps) {
                 </View>
               </View>
               <View style={styles.tiles}>
+                {team.players.length === 0 ? <Text style={styles.note}>No active players on this team. Add players on the website (Teams).</Text> : null}
                 {team.players.map((p) => {
                   const on = picked.includes(p.id);
                   return (
@@ -180,7 +206,7 @@ export function LineupsStep({ state, teams, update }: StepProps) {
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
                       onPress={() => update((s) => toggleStarter(s, side, p.id))}
-                      style={[styles.tile, on && { backgroundColor: team.color_primary, borderColor: team.color_primary }]}>
+                      style={[styles.tile, { width: tileWidth }, on && { backgroundColor: team.color_primary, borderColor: team.color_primary }]}>
                       <Text style={[styles.tileNumber, on && { color: colors.card }]}>{p.number}</Text>
                       <View style={{ flex: 1 }}>
                         <Text numberOfLines={1} style={[styles.tileFirst, on && { color: colors.card }]}>{p.first_name}</Text>
@@ -198,13 +224,13 @@ export function LineupsStep({ state, teams, update }: StepProps) {
   );
 }
 
-export function ReviewStep({ state, teams }: StepProps) {
+export function ReviewStep({ state, teams, narrow = false }: StepProps) {
   const issues = problems(state, teams);
   return (
     <View style={{ gap: 18 }}>
       <Title title="Review" subtitle="Check everything, then start the game." />
       <View style={styles.card}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           {SIDES.map(({ side }, i) => {
             const team = teamOf(teams, state.teamIds[side]);
             return (
@@ -227,12 +253,12 @@ export function ReviewStep({ state, teams }: StepProps) {
         ))}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 14 }}>
+      <View style={{ flexDirection: narrow ? 'column' : 'row', gap: 14 }}>
         {SIDES.map(({ side, title }) => {
           const team = teamOf(teams, state.teamIds[side]);
           const names = state.starters[side].map((id) => team?.players.find((p) => p.id === id)).filter(Boolean).map((p) => `${p?.number} ${p?.display_name}`);
           return (
-            <View key={side} style={[styles.card, { flex: 1 }]}>
+            <View key={side} style={[styles.card, { flex: narrow ? 0 : 1 }]}>
               <Label>{`${title} · ${state.tracking[side] === 'full' ? 'Full detail' : 'Team only'}`}</Label>
               <Text style={styles.bullet}>{state.tracking[side] === 'full' ? names.join(', ') || 'No starters picked' : 'No lineup needed'}</Text>
             </View>
@@ -264,11 +290,11 @@ const styles = StyleSheet.create({
   lineupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   pill: { backgroundColor: colors.line2, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 4 },
   pillText: { fontFamily: font.bodyBold, fontSize: 12, color: colors.ink },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tile: { width: '31.5%', minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.line, borderRadius: radius.button, paddingHorizontal: 10 },
-  tileNumber: { fontFamily: font.display, fontSize: 24, color: colors.ink, minWidth: 30 },
-  tileFirst: { fontFamily: font.bodyBold, fontSize: 12, color: colors.ink },
-  tileLast: { fontFamily: font.body, fontSize: 12, color: colors.muted },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: TILE_GAP },
+  tile: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.line, borderRadius: radius.button, paddingHorizontal: 14 },
+  tileNumber: { fontFamily: font.display, fontSize: 32, color: colors.ink, minWidth: 40 },
+  tileFirst: { fontFamily: font.body, fontSize: 14, color: colors.muted },
+  tileLast: { fontFamily: font.bodyBold, fontSize: 17, color: colors.ink },
   card: { backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, padding: 16 },
   bullet: { fontFamily: font.body, fontSize: 15, color: colors.ink, marginTop: 4 },
 });

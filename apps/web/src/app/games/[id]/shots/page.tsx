@@ -25,26 +25,32 @@ async function ShotChart({ params, searchParams }: Props) {
 
   const side: Side = search.team === "away" ? "away" : "home";
   const result = search.result === "made" || search.result === "missed" ? search.result : "all";
-  const period = Number(search.period) || null;
+  // player and period accept several values, comma-separated; an empty list means "all"
+  const periods = new Set((search.period ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0));
   const players = game.players.filter((p) => p.side === side);
-  const player = players.find((p) => p.id === search.player)?.id ?? null;
+  const picked = new Set((search.player ?? "").split(",").filter((id) => players.some((p) => p.id === id)));
+  const toggle = <T extends string | number>(set: Set<T>, value: T) => {
+    const next = new Set(set);
+    if (!next.delete(value)) next.add(value);
+    return next.size ? [...next].join(",") : undefined;
+  };
 
   const link = (patch: Partial<Search>) => {
-    const next: Search = { team: side, player: player ?? undefined, result: result === "all" ? undefined : result, period: period ? String(period) : undefined, ...patch };
+    const next: Search = { team: side, player: picked.size ? [...picked].join(",") : undefined, result: result === "all" ? undefined : result, period: periods.size ? [...periods].join(",") : undefined, ...patch };
     const query = new URLSearchParams(Object.entries(next).filter((entry): entry is [string, string] => entry[1] !== undefined)).toString();
     return `/games/${id}/shots${query ? `?${query}` : ""}`;
   };
 
   // team + period + player decide which shots count; "result" only changes what is drawn
   const all = placedShots(game.events);
-  const counted = all.filter((s) => s.side === side && (!period || s.period === period) && (!player || s.playerId === player));
+  const counted = all.filter((s) => s.side === side && (!periods.size || periods.has(s.period)) && (!picked.size || (s.playerId !== null && picked.has(s.playerId))));
   const drawn = counted.filter((s) => result === "all" || (result === "made" ? s.made : !s.made));
   const zones = shotZones(counted);
   const made = counted.filter((s) => s.made).length;
   const periodCount = Math.max(game.rules.periods, ...game.events.map((e) => e.period));
   const perPlayer = new Map<string, { made: number; att: number }>();
   for (const s of all) {
-    if (s.side !== side || !s.playerId || (period && s.period !== period)) continue;
+    if (s.side !== side || !s.playerId || (periods.size && !periods.has(s.period))) continue;
     const line = perPlayer.get(s.playerId) ?? { made: 0, att: 0 };
     line.att++;
     if (s.made) line.made++;
@@ -75,11 +81,11 @@ async function ShotChart({ params, searchParams }: Props) {
         <ul className="rounded-2xl bg-card p-2 shadow-sm">
           {players.map((p) => {
             const line = perPlayer.get(p.id);
-            const active = player === p.id;
+            const active = picked.has(p.id);
             return (
               <li key={p.id}>
                 <Link
-                  href={link({ player: active ? undefined : p.id })}
+                  href={link({ player: toggle(picked, p.id) })}
                   aria-current={active}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] ${active ? "bg-green-tint font-semibold" : ""}`}
                 >
@@ -97,9 +103,9 @@ async function ShotChart({ params, searchParams }: Props) {
           ))}
         </FilterRow>
         <FilterRow label="Period">
-          <Chip href={link({ period: undefined })} active={!period}>All</Chip>
+          <Chip href={link({ period: undefined })} active={!periods.size}>All</Chip>
           {Array.from({ length: periodCount }, (_, i) => i + 1).map((n) => (
-            <Chip key={n} href={link({ period: String(n) })} active={period === n}>{periodLabel(game.rules, n)}</Chip>
+            <Chip key={n} href={link({ period: toggle(periods, n) })} active={periods.has(n)}>{periodLabel(game.rules, n)}</Chip>
           ))}
         </FilterRow>
       </aside>

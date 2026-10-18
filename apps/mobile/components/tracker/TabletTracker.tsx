@@ -6,17 +6,15 @@ import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'reac
 import { font } from '../wizard/kit';
 import { Court } from './Court';
 import { PlayerCards } from './PlayerCards';
-import { LastPlays } from './Plays';
+import { RecentPlays } from './Plays';
 import { PromptPanel } from './PromptPanel';
 import { QuickPad, TeamOnlyBar } from './QuickPad';
 import { ScoreBar } from './ScoreBar';
 import { ShotPopover } from './ShotPopover';
+import { TrackerMenu } from './TrackerMenu';
 import { ActionButton, TeamToggle } from './ui';
-import { playerLabel } from './format';
+import { playerLabel, playerName } from './format';
 import { useTrackerUi, type ReadyTracker } from './useTrackerUi';
-
-const POPOVER_W = 236;
-const POPOVER_H = 290;
 
 /** Tablet tracker: 1b (two tracked teams) or 2a (one tracked team, the other logged at team level). */
 export function TabletTracker({ t }: { t: ReadyTracker }) {
@@ -26,7 +24,9 @@ export function TabletTracker({ t }: { t: ReadyTracker }) {
   const teamOnlySides = (['home', 'away'] as const).filter((s) => game.tracking[s] !== 'full');
   const oneTeam = fullSides.length === 1;
   const onlyFull: Side | undefined = oneTeam ? fullSides[0] : undefined;
-  const [courtSize, setCourtSize] = useState({ w: 0, h: 0 });
+  // the space left for the court; the court is the biggest 500:470 box that fits it, so nothing scrolls
+  const [area, setArea] = useState({ w: 0, h: 0 });
+  const [menu, setMenu] = useState(false);
 
   // one-team mode always works on the tracked team
   const { side, setSide } = ui;
@@ -36,14 +36,14 @@ export function TabletTracker({ t }: { t: ReadyTracker }) {
 
   const courtShots = derived.shots;
   const sideColors = { home: game.teams.home.color, away: game.teams.away.color };
-  const pendingPx = ui.pending && courtSize.w ? { x: (ui.pending.x / 500) * courtSize.w, y: (ui.pending.y / 470) * courtSize.h } : null;
-  const popoverLeft = pendingPx ? (pendingPx.x > courtSize.w / 2 ? Math.max(8, pendingPx.x - POPOVER_W - 28) : Math.min(courtSize.w - POPOVER_W - 8, pendingPx.x + 28)) : 0;
-  const popoverTop = pendingPx ? Math.max(8, Math.min(courtSize.h - POPOVER_H, pendingPx.y - 60)) : 0;
-  const onLayout = (e: LayoutChangeEvent) => setCourtSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
+  const courtW = Math.max(0, Math.min(area.w, (area.h * 500) / 470));
+  const courtH = (courtW * 470) / 500;
+  const onAreaLayout = (e: LayoutChangeEvent) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
   return (
     <View style={styles.root}>
-      <ScoreBar t={t} />
+      <ScoreBar t={t} onMenu={() => setMenu(true)} />
+      <TrackerMenu t={t} visible={menu} onClose={() => setMenu(false)} />
       <View style={styles.body}>
         <ScrollView style={styles.left} contentContainerStyle={{ gap: 12 }}>
           {!oneTeam && fullSides.length === 2 ? <TeamToggle game={game} side={ui.side} onChange={ui.setSide} /> : null}
@@ -63,34 +63,26 @@ export function TabletTracker({ t }: { t: ReadyTracker }) {
           )}
         </ScrollView>
 
-        <ScrollView style={styles.centre} contentContainerStyle={{ gap: 12 }}>
+        <View style={styles.centre}>
           {fullSides.length > 0 ? (
             <>
               <View style={styles.hintRow}>
                 <Text style={styles.hint}>Tap where the shot was taken. 2PT or 3PT is detected from the spot.</Text>
                 <Text style={styles.hintStrong}>
-                  {game.teams[ui.side].name} shots: {courtShots.filter((s) => s.side === ui.side).length}
+                  {ui.playerId ? playerName(game, ui.playerId) : game.teams[ui.side].name} shots: {courtShots.filter((s) => s.side === ui.side && (!ui.playerId || s.playerId === ui.playerId)).length}
                 </Text>
               </View>
-              <View onLayout={onLayout}>
-                <Court
-                  shots={courtShots}
-                  sideColors={sideColors}
-                  onlySide={ui.side}
-                  pending={ui.pending}
-                  onTap={ui.tapCourt}
-                  disabled={ui.busy}
-                />
-                {ui.pending && pendingPx ? (
-                  <View style={{ position: 'absolute', left: popoverLeft, top: popoverTop, width: POPOVER_W }}>
-                    <ShotPopover
-                      key={`${ui.pending.x}-${ui.pending.y}`}
-                      t={t}
-                      ui={ui}
-                      location={ui.pending}
-                      initialSide={ui.side}
-                      allowedSides={fullSides}
-                      onClose={() => ui.setPending(null)}
+              <View style={styles.courtArea} onLayout={onAreaLayout}>
+                {courtW > 0 ? (
+                  <View style={{ width: courtW, height: courtH }}>
+                    <Court
+                      shots={courtShots}
+                      sideColors={sideColors}
+                      onlySide={ui.side}
+                      onlyPlayer={ui.playerId}
+                      pending={ui.pending}
+                      onTap={ui.tapCourt}
+                      disabled={ui.busy}
                     />
                   </View>
                 ) : null}
@@ -100,19 +92,29 @@ export function TabletTracker({ t }: { t: ReadyTracker }) {
           {teamOnlySides.map((s) => (
             <TeamOnlyBar key={s} t={t} ui={ui} side={s} />
           ))}
-        </ScrollView>
+        </View>
 
         <ScrollView style={styles.right} contentContainerStyle={{ gap: 12 }}>
-          {t.prompt ? (
+          {ui.pending ? (
+            <ShotPopover
+              key={`${ui.pending.x}-${ui.pending.y}`}
+              t={t}
+              ui={ui}
+              location={ui.pending}
+              initialSide={ui.side}
+              allowedSides={fullSides}
+              onClose={() => ui.setPending(null)}
+            />
+          ) : t.prompt ? (
             <PromptPanel t={t} onAnswer={ui.actions.answer} onDone={ui.actions.done} onCancel={ui.actions.cancel} />
           ) : fullSides.length > 0 ? (
             <QuickPad t={t} ui={ui} showUndo />
           ) : (
             <ActionButton label="↶ Undo last play" tone="outline" onPress={ui.actions.undo} />
           )}
+          <RecentPlays t={t} count={5} />
         </ScrollView>
       </View>
-      <LastPlays t={t} />
     </View>
   );
 }
@@ -121,7 +123,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper },
   body: { flex: 1, flexDirection: 'row', padding: 20, gap: 20 },
   left: { width: 220, flexGrow: 0 },
-  centre: { flex: 1 },
+  centre: { flex: 1, gap: 12 },
+  courtArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   right: { width: 300, flexGrow: 0 },
   label: { fontFamily: font.bodyBold, fontSize: 11, letterSpacing: 1.1, color: colors.muted },
   hintRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },

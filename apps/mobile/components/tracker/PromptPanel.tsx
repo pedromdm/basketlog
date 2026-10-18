@@ -51,7 +51,7 @@ export function PromptPanel({
                 key={o.id}
                 label={optionLabel(game, o)}
                 tone={home ? 'green' : 'miss'}
-                height={50}
+                height={44}
                 onPress={() => onAnswer(o.id)}
               />
             );
@@ -61,7 +61,7 @@ export function PromptPanel({
       {neutral.length ? (
         <Grid columns={neutral.length <= 2 || players.length === 0 ? 2 : 1}>
           {neutral.map((o) => (
-            <ActionButton key={o.id} label={optionLabel(game, o)} tone="ghost" height={50} onPress={() => onAnswer(o.id)} />
+            <ActionButton key={o.id} label={optionLabel(game, o)} tone="ghost" height={44} onPress={() => onAnswer(o.id)} />
           ))}
         </Grid>
       ) : null}

@@ -1,5 +1,5 @@
-import { classifyShot, type Derived, type ShotLocation, type Side, type TrackerState } from '@basket-log/core';
-import { useCallback, useMemo, useState } from 'react';
+import { classifyShot, pendingFoulOutSub, type Derived, type ShotLocation, type Side, type TrackerState } from '@basket-log/core';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { TrackerApi, TrackerGame } from '@/lib/tracker/types';
 
@@ -96,6 +96,17 @@ export function useTrackerUi(t: ReadyTracker) {
     },
     [pending, game.tracking, dispatch],
   );
+
+  // A player who has fouled out must leave once the foul's play is done (NBA keeps him in if nobody can replace him).
+  const due = pendingFoulOutSub(state);
+  const dueSide = due?.side;
+  const dueOut = due?.outPlayerId;
+  const dueMode = due?.mode;
+  useEffect(() => {
+    if (!dueSide || !dueOut) return;
+    // someone on the bench: ask who comes in. Nobody (FIBA): he leaves and the team plays short.
+    dispatch(dueMode === 'leave' ? { type: 'leaveCourt', side: dueSide, playerId: dueOut } : { type: 'sub', side: dueSide, outPlayerId: dueOut });
+  }, [dueSide, dueOut, dueMode, state.chain, dispatch]);
 
   return {
     side,

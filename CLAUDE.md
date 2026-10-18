@@ -39,7 +39,7 @@ Planned build order: `core` → `db` → mobile tracker → web. Work one phase 
 - `chain.ts`: `initTracker(config)` then `reduce(state, action, env) -> { state, emittedEvents, nextPrompt }`. `env` injects `newId`/`now`/`userId`, so the reducer stays pure. Prompts are answered with `{ type: 'answer', optionId }`; option ids look like `player:h2`, `off:team`, `def:player:a3`, `yes`/`no`, `none`, `skip`, `made`/`missed`, `1`/`2`/`3`.
 - While a play is open (`state.chain`), actions that start a new play are ignored. `done` keeps what was answered, `cancel` and `undo` void the open play. The shot is logged on tap; the fast-break answer is a separate `fb` event (`fastBreak: boolean`) in the same group, which `derive` folds into the play text.
 - `derive.ts`: `derive(events, setup)` gives score, per-period team fouls, lineups, box lines, shot dots and play-by-play text. `activeEvents` drops voided groups; it is the one place that interprets `void`.
-- Tests are at the reducer and `derive` seams (`chain.test.ts`, `derive.test.ts`; shared fixtures in `test-helpers.ts`). `classifyShot` (2PT/3PT from a court tap), rules helpers (period labels, timeouts left) and minutes/plus-minus are not built yet.
+- Tests are at the reducer and `derive` seams (`chain.test.ts`, `derive.test.ts`; shared fixtures in `test-helpers.ts`). `classifyShot`, rules helpers (`periods.ts`) and `minutes.ts` (`playingTime`: minutes and plus/minus from sub events and made shots; `formatMinutes`, `formatPlusMinus`) are tested.
 
 ## Commands
 
@@ -61,23 +61,25 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 - `packages/db/src/queries.ts`: team/player CRUD, `listRulePresets`, and `createGame`, which calls the `create_game()` SQL function (atomic: game row, rules snapshot, roster snapshot, status `live`). Removing a player only sets `active = false`; the jersey-number unique index covers active players only.
 - Web: `/teams` (screen 4b) and `/login` (magic link), Supabase SSR clients in `apps/web/src/lib/supabase`, session refresh in `src/proxy.ts`. Mobile: sign-in (`app/sign-in.tsx`), wizard (`app/new-game.tsx`, logic in `lib/wizard.ts`), placeholder `app/game/[id].tsx` until Phase 3. Both apps read local Supabase URL/key from `.env` (copy `.env.example`).
 - `pnpm install` on Windows can fail on `typescript-eslint` while `rtk` hides it; run `rtk proxy pnpm install`. A clean `node_modules` fixes it.
-- Not verified in a browser/device: magic-link round trip, teams autosave, wizard to Start game. Date field is plain text; Google/Apple buttons are disabled stubs.
+- Not verified in a browser/device: magic-link round trip, teams autosave, wizard to Start game. The date field is a native picker (`DateField` in `components/wizard/kit.tsx`; a validated text field on web). Google/Apple buttons are disabled stubs.
 
 ## Phase 3 (mobile tracker)
 
 - `packages/core`: `classifyShot` (court.ts), `periodLabel` / `periodLengthMs` / `canStartNextPeriod` / `timeoutsLeft` (periods.ts); `initTracker({ events })` resumes a game (period and seq follow the saved events).
 - Data layer `apps/mobile/lib/tracker`: `useTracker(gameId)` (contract in `types.ts`) runs the reducer, writes emitted events to a local outbox first (expo-sqlite on native, memory on web via `sqliteStorage.web.ts`), then upserts to `game_events` on `id` with ignore-duplicates (idempotent retries) with backoff and NetInfo. It also owns the 100 ms clock tick and haptics. A period change is not an event; the period is recovered from the last event.
 - Views `apps/mobile/components/tracker` (tablet 1b/2a, phone 3a/1c, Court in react-native-svg) and `app/game/[id].tsx`. Prompt option labels are raw ids; `format.ts` turns them into names.
-- Untested on a device: court tap coordinates, haptics, offline queue, layouts. No Jest for mobile yet; only core logic has unit tests.
-- Known gaps: `finishGame` refuses while events are pending; a crash in the few ms before the outbox write completes could drop one event; team-only "MISS" button logs a 2PT miss.
+- Untested on a device: court tap coordinates, haptics, offline queue, layouts.
+- The outbox write is synchronous (`EventQueue.enqueueSync`, expo-sqlite sync API), so an event is on disk before the tap returns. `finishGame` works offline: the game is final locally at once and `games.status` is set after the last event syncs (the request is in memory only; after an app restart, tap Finish again). The team-only bar has separate `2 Miss` / `3 Miss` buttons.
+- Mobile unit tests use Vitest (`pnpm -F @basket-log/mobile test`) for `lib/` only (queue, sync, wizard); there is no Jest/RNTL for components.
 
 ## Phase 4 (public website)
 
-- `packages/core`: `recap.ts` (`lineScore`, `leadStats`, `biggestRuns`; all work on `derive().plays`' running score) and `boxscore.ts` (`teamTotals`, `percentage`, `teamLeaders`, `shotZones`). Minutes and plus/minus are not computed; the box score shows an em dash.
+- `packages/core`: `recap.ts` (`lineScore`, `leadStats`, `biggestRuns`; all work on `derive().plays`' running score) and `boxscore.ts` (`teamTotals`, `percentage`, `teamLeaders`, `shotZones`). Minutes and plus/minus come from `playingTime` (`GameView.playing`); a final game ends at the end of the last period reached, a live one at its latest event.
 - `packages/db/src/events.ts`: `toRow`/`fromRow` shared by mobile (outbox/sync) and web.
 - Web routes: `/games` (1a), `/games/[id]` hub layout + play-by-play (1d), `/games/[id]/box` (1e), `/shots` (1f, filters via searchParams), `/recap` (1g), `/players/[id]/games/[gameId]` (1h). `src/lib/game-data.ts` `loadGameView` builds everything from Supabase rows; `getGameView` caches it per request. Pages sit under `cacheComponents`, so request data must be inside `<Suspense>`.
 - Live games: `components/live-refresh.tsx` subscribes to Realtime (`game_events` INSERT, `games` UPDATE) and calls `router.refresh()` (throttled 500 ms). Open Graph image: `app/games/[id]/opengraph-image.tsx`.
-- Known gaps: unknown game ids return HTTP 200 with an empty shell (streaming under cacheComponents) instead of a 404 status; filters on the shot chart are single-select links; pages were checked via rendered HTML and an OG image render, not visually against the screenshots.
+- `/games` shows square cards in an auto-fill grid (4 / 2 / 1 per row by width). `loadGameCards` (`src/lib/games-list.ts`) adds competition, points per period and each side's top scorer; there is no W–L record (not stored). The events query is one `in(game_ids)` call, so it is capped by Supabase's default 1000 rows.
+- `src/proxy.ts` answers 404 for unknown or invisible game ids (the hub streams, so a page can't set the status). The shot chart's player and period filters are multi-select (comma-separated `player` / `period` params). Pages were checked via rendered HTML and an OG image render, not visually against the screenshots.
 
 ## Phase 5 (viewer, admin, CSV, push)
 
@@ -85,3 +87,9 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 - Mobile viewer: Games tab (`app/(tabs)/index.tsx`), `app/game-view/[id].tsx` (Plays/Box/Shots/Leaders, Realtime refetch), `app/player-view/...`, components in `components/viewer/`. Box tab shares CSV via the RN Share sheet.
 - Web admin: `/admin`, `/admin/games/[id]` (edit/delete scheduled game, scorekeepers by email via `assign_scorekeeper` / `list_game_scorekeepers` RPCs, which check `can_manage_game`), `/games/[id]/box/export` CSV download. The game creator keeps access via `created_by` even after being removed as scorekeeper.
 - Push: `apps/mobile/lib/push` (`usePushRegistration`, `useFollowedTeams`; Follow button in the viewer header), tables `push_tokens` / `team_follows` / `notified_events`, Edge Function `supabase/functions/notify` (pure rules in `rules.ts`), webhook triggers in `20260101000500_notify_webhooks.sql` (pg_net, skipped with a warning until the vault secret `notify_service_key` and `app.notify_url` are set). Never run end to end: needs an EAS `projectId` in `app.json`, APNs/FCM credentials, `supabase functions deploy notify`, and a Deno-capable environment to test.
+
+## Phase 6 (release)
+
+Config only; nothing was built or submitted. `apps/mobile/eas.json` (development/preview/production), `apps/web/vercel.json`, Sentry in both apps (`@sentry/react-native` in `app/_layout.tsx`, `@sentry/nextjs` via `instrumentation*.ts` and `withSentryConfig` imported from `@sentry/nextjs/config`), all inert until a DSN env var is set. Steps and required secrets: `docs/RELEASE.md`.
+
+- Game page (`app/game-view/[id].tsx`): dark `ScoreHeader` (status, score, fouls / timeouts left / bonus) and an Overview tab (`OverviewView.tsx`, two columns from 700 pt wide): score flow chart, line score, team comparison bars, top performers, runs, shot zones, latest plays. Core helpers in `overview.ts` (`scoreFlow`, `extraTeamStats` for paint and fast-break points, `topPerformers`). Not checked on a device.

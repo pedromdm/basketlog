@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
@@ -23,11 +22,13 @@ import { EventQueue } from './queue';
 import { getQueueStorage } from './sqliteStorage';
 import { Syncer, supabaseUploader } from './sync';
 import type { SyncInfo, TrackerApi, TrackerGame } from './types';
+import { newId } from '../uuid';
 import { supabase } from '../supabase';
 
 const TICK_MS = 100;
 const KEEP_AWAKE_TAG = 'basket-log-tracker';
-const CLOCK_ACTIONS = new Set<TrackerAction['type']>(['setClock', 'startClock', 'pauseClock', 'setPeriod']);
+const CLOCK_ACTIONS = new Set<TrackerAction['type']>(['setClock', 'startClock', 'pauseClock', 'setPeriod', 'syncEvents']);
+const REMOTE_THROTTLE_MS = 400;
 
 const queue = new EventQueue(getQueueStorage());
 
@@ -95,7 +96,7 @@ export function useTracker(gameId: string): TrackerApi {
           roster: { home: lineup(loadedGame, 'home'), away: lineup(loadedGame, 'away') },
           events,
         });
-        envRef.current = { newId: () => Crypto.randomUUID(), now: () => new Date().toISOString(), userId };
+        envRef.current = { newId, now: () => new Date().toISOString(), userId };
         stateRef.current = initial;
         promptRef.current = null;
         setGame(loadedGame);
@@ -137,9 +138,9 @@ export function useTracker(gameId: string): TrackerApi {
     if (result.emittedEvents.length > 0) {
       haptic(result.emittedEvents);
       const rows = result.emittedEvents.map(toRow);
-      // Local-first: persist to the outbox (in order) before any network call.
+      // Local-first: the outbox write is synchronous, so the event is on disk before this tap returns.
+      queue.enqueueSync(rows);
       writeChain.current = writeChain.current
-        .then(() => queue.enqueue(rows))
         .then(() => syncerRef.current?.refreshPending())
         .then(() => syncerRef.current?.flush())
         .catch(() => {});
@@ -166,6 +167,43 @@ export function useTracker(gameId: string): TrackerApi {
     }, TICK_MS);
     return () => clearInterval(id);
   }, [clockRunning, dispatch]);
+
+  // Another device may be scoring the same game: when it saves events, fetch the server's list and merge it in.
+  const loaded = !!game;
+  useEffect(() => {
+    if (!loaded) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const pull = () => {
+      if (timer) return;
+      timer = setTimeout(async () => {
+        timer = null;
+        try {
+          dispatch({ type: 'syncEvents', events: await loadEvents(gameId, queue) });
+        } catch {
+          // offline: the next change or reconnect pulls again
+        }
+      }, REMOTE_THROTTLE_MS);
+    };
+    const channel = supabase
+      .channel(`tracker:${gameId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `game_id=eq.${gameId}` }, (payload) => {
+        const id = (payload.new as { id?: string }).id;
+        // our own events echo back through here; only pull for ones we don't have
+        if (!id || !stateRef.current?.events.some((e) => e.id === id)) pull();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, (payload) => {
+        const status = (payload.new as { status?: TrackerGame['status'] }).status;
+        if (status) setGame((g) => (g ? { ...g, status } : g));
+      })
+      .subscribe((status) => {
+        // after a dropped connection, catch up on what was missed
+        if (status === 'SUBSCRIBED') pull();
+      });
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [loaded, gameId, dispatch]);
 
   const live = game?.status === 'live';
   useEffect(() => {
@@ -196,15 +234,32 @@ export function useTracker(gameId: string): TrackerApi {
     dispatch({ type: 'setClock', clockMs: periodLengthMs(s.rules, period), shotClockMs: s.rules.shotClock * 1000 });
   }, [dispatch, game]);
 
+  // finishGame can be requested offline: the game is final locally right away and games.status
+  // follows once every event has reached the server (events can't be inserted into a final game).
+  const finishRequested = useRef(false);
+  const markFinalOnServer = useCallback(async () => {
+    const { error: err } = await supabase.from('games').update({ status: 'final' }).eq('id', gameId);
+    if (err) throw new Error(err.message);
+    finishRequested.current = false;
+  }, [gameId]);
+
   const finishGame = useCallback(async () => {
     await writeChain.current;
     await syncerRef.current?.flush();
-    if ((await queue.count(gameId)) > 0) throw new Error('Events are still syncing; try again when online');
-    const { error: err } = await supabase.from('games').update({ status: 'final' }).eq('id', gameId);
-    if (err) throw new Error(err.message);
     dispatch({ type: 'pauseClock' });
+    if ((await queue.count(gameId)) > 0) {
+      finishRequested.current = true;
+    } else {
+      await markFinalOnServer();
+    }
     setGame((g) => (g ? { ...g, status: 'final' } : g));
-  }, [dispatch, gameId]);
+  }, [dispatch, gameId, markFinalOnServer]);
+
+  useEffect(() => {
+    if (finishRequested.current && sync.status === 'synced' && sync.pending === 0) {
+      markFinalOnServer().catch(() => {});
+    }
+  }, [sync, markFinalOnServer]);
 
   return { loading, error, game, state, derived, prompt, sync, dispatch, toggleClock, nextPeriod, finishGame, events };
 }

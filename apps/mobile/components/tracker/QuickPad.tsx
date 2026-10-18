@@ -29,12 +29,12 @@ export function QuickPad({
       {showShots ? (
         <Grid columns={2}>
           {[
-            <ActionButton key="m2" label="+2 Made" tone="green" height={56} disabled={busy} onPress={() => actions.shot(2, true)} />,
-            <ActionButton key="x2" label="2 Miss" tone="miss" height={56} disabled={busy} onPress={() => actions.shot(2, false)} />,
-            <ActionButton key="m3" label="+3 Made" tone="green" height={56} disabled={busy} onPress={() => actions.shot(3, true)} />,
-            <ActionButton key="x3" label="3 Miss" tone="miss" height={56} disabled={busy} onPress={() => actions.shot(3, false)} />,
-            <ActionButton key="f1" label="+1 FT" tone="greenDark" height={56} disabled={busy} onPress={() => actions.ft(true)} />,
-            <ActionButton key="fx" label="FT Miss" tone="miss" height={56} disabled={busy} onPress={() => actions.ft(false)} />,
+            <ActionButton key="m2" label="+2 Made" tone="green" height={48} disabled={busy} onPress={() => actions.shot(2, true)} />,
+            <ActionButton key="x2" label="2 Miss" tone="miss" height={48} disabled={busy} onPress={() => actions.shot(2, false)} />,
+            <ActionButton key="m3" label="+3 Made" tone="green" height={48} disabled={busy} onPress={() => actions.shot(3, true)} />,
+            <ActionButton key="x3" label="3 Miss" tone="miss" height={48} disabled={busy} onPress={() => actions.shot(3, false)} />,
+            <ActionButton key="f1" label="+1 FT" tone="greenDark" height={48} disabled={busy} onPress={() => actions.ft(true)} />,
+            <ActionButton key="fx" label="FT Miss" tone="miss" height={48} disabled={busy} onPress={() => actions.ft(false)} />,
           ]}
         </Grid>
       ) : null}
@@ -45,11 +45,11 @@ export function QuickPad({
 }
 
 /** OREB DREB AST / STL BLK TOV / FOUL SUB TIMEOUT. */
-export function EventGrid({ ui, columns = 3, short = false }: { ui: TrackerUi; columns?: number; short?: boolean }) {
+export function EventGrid({ ui, columns = 3, short = false, gap }: { ui: TrackerUi; columns?: number; short?: boolean; gap?: number }) {
   const { actions, busy } = ui;
   const noPlayer = ui.playerId === null;
   return (
-    <Grid columns={columns}>
+    <Grid columns={columns} {...(gap === undefined ? {} : { gap })}>
       {[
         <ActionButton key="oreb" label="OREB" disabled={busy} onPress={() => actions.quick('oreb')} />,
         <ActionButton key="dreb" label="DREB" disabled={busy} onPress={() => actions.quick('dreb')} />,
@@ -76,7 +76,8 @@ export function TeamOnlyBar({ t, ui, side }: { t: ReadyTracker; ui: TrackerUi; s
         <ActionButton label="+2" tone="green" disabled={busy} onPress={() => a.shot(2, true)} style={styles.barBtn} />
         <ActionButton label="+3" tone="green" disabled={busy} onPress={() => a.shot(3, true)} style={styles.barBtn} />
         <ActionButton label="+1 FT" tone="greenDark" disabled={busy} onPress={() => a.ft(true)} style={styles.barBtn} />
-        <ActionButton label="Miss" tone="miss" disabled={busy} onPress={() => a.shot(2, false)} style={styles.barBtn} />
+        <ActionButton label="2 Miss" tone="miss" disabled={busy} onPress={() => a.shot(2, false)} style={styles.barBtn} />
+        <ActionButton label="3 Miss" tone="miss" disabled={busy} onPress={() => a.shot(3, false)} style={styles.barBtn} />
         <ActionButton label="FT Miss" tone="miss" disabled={busy} onPress={() => a.ft(false)} style={styles.barBtn} />
         <ActionButton label="TOV" disabled={busy} onPress={a.turnover} style={styles.barBtn} />
         <ActionButton label="Foul" tone="ghost" disabled={busy} onPress={a.foul} style={styles.barBtn} />

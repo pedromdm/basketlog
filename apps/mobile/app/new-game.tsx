@@ -3,7 +3,8 @@ import { createGame, listRulePresets, listTeams, type TeamWithPlayers } from '@b
 import { colors } from '@basket-log/ui';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, font } from '@/components/wizard/kit';
 import { LineupsStep, MatchupStep, ReviewStep, RulesStep } from '@/components/wizard/steps';
@@ -14,6 +15,11 @@ const VIEWS = [MatchupStep, RulesStep, LineupsStep, ReviewStep];
 
 export default function NewGameScreen() {
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // A phone (either orientation) gets a top step bar instead of the 260 pt side rail; portrait also stacks columns.
+  const phone = Math.min(width, height) < 600;
+  const narrow = width < 700;
   const [state, setState] = useState<WizardState>(() => initialWizard());
   const [teams, setTeams] = useState<TeamWithPlayers[]>([]);
   const [presets, setPresets] = useState<{ name: string; rules: GameRules }[]>([]);
@@ -38,12 +44,13 @@ export default function NewGameScreen() {
   const issues = problems(state, teams);
   const last = state.step === STEPS.length - 1;
 
-  const start = async () => {
+  const start = async (startNow = true) => {
     setStarting(true);
     setStartError(null);
     try {
-      const id = await createGame(supabase, toNewGameInput(state));
-      router.replace({ pathname: '/game/[id]', params: { id } });
+      const id = await createGame(supabase, { ...toNewGameInput(state), status: startNow ? 'live' : 'scheduled' });
+      if (startNow) router.replace({ pathname: '/game/[id]', params: { id } });
+      else router.replace('/');
     } catch (e) {
       setStartError((e as Error).message);
       setStarting(false);
@@ -53,8 +60,29 @@ export default function NewGameScreen() {
   const View_ = VIEWS[state.step] as (typeof VIEWS)[number];
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, phone && { flexDirection: 'column' }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      {phone ? (
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 8), paddingLeft: Math.max(insets.left, 12), paddingRight: Math.max(insets.right, 12) }]}>
+          <Button kind="outline" label="✕" accessibilityLabel="Cancel" onPress={() => router.back()} style={styles.compactButton} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.topTitle}>NEW GAME · {STEPS[state.step]?.title.toUpperCase()}</Text>
+            <Text style={styles.stepHint}>{STEPS[state.step]?.hint}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {STEPS.map((step, i) => (
+              <Pressable
+                key={step.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Step ${i + 1}: ${step.title}`}
+                onPress={() => setState((s) => goToStep(s, i))}
+                style={[styles.circle, (i === state.step || i < state.step) && { backgroundColor: colors.green }]}>
+                <Text style={styles.circleText}>{i < state.step ? '✓' : i + 1}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : (
       <View style={styles.rail}>
         <Text style={styles.wordmark}>
           BASKET <Text style={{ color: colors.greenLight }}>LOG</Text>
@@ -84,26 +112,30 @@ export default function NewGameScreen() {
         <View style={{ flex: 1 }} />
         <Button kind="outline" label="Cancel" onPress={() => router.back()} />
       </View>
+      )}
 
       <View style={styles.content}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={[styles.scroll, phone && { paddingHorizontal: Math.max(insets.left, 16), paddingVertical: 16 }]}>
           {!loaded ? (
             <ActivityIndicator color={colors.green} />
           ) : loadError ? (
             <Text style={styles.error}>Could not load teams: {loadError}</Text>
           ) : (
-            <View_ state={state} teams={teams} presets={presets} update={update} />
+            <View_ state={state} teams={teams} presets={presets} update={update} narrow={narrow} />
           )}
         </ScrollView>
-        <View style={styles.footer}>
-          <Button kind="outline" label="← Back" disabled={state.step === 0} onPress={() => setState((s) => goToStep(s, s.step - 1))} />
-          <Text style={[styles.status, startError ? { color: colors.ink } : null]}>
+        <View style={[styles.footer, phone && { height: 64, paddingHorizontal: Math.max(insets.left, 16), gap: 10, paddingBottom: Math.max(insets.bottom, 0) }]}>
+          <Button kind="outline" label={phone ? '←' : '← Back'} accessibilityLabel="Back" disabled={state.step === 0} onPress={() => setState((s) => goToStep(s, s.step - 1))} {...(phone ? { style: styles.compactButton } : {})} />
+          <Text numberOfLines={2} style={[styles.status, phone && { fontSize: 12 }, startError ? { color: colors.ink } : null]}>
             {startError ?? (last ? (issues.length ? `${issues.length} to fix before starting` : 'Ready to start') : `Step ${state.step + 1} of ${STEPS.length}`)}
           </Text>
           {last ? (
-            <Button kind="green" label={starting ? 'Starting…' : 'Start game'} disabled={issues.length > 0 || starting} onPress={start} />
+            <>
+              <Button kind="outline" label={phone ? 'Save' : 'Save for later'} disabled={issues.length > 0 || starting} onPress={() => void start(false)} {...(phone ? { style: { minWidth: 70, paddingHorizontal: 12 } } : {})} />
+              <Button kind="green" label={starting ? 'Starting…' : 'Start game'} disabled={issues.length > 0 || starting} onPress={() => void start(true)} {...(phone ? { style: { minWidth: 110, paddingHorizontal: 14 } } : {})} />
+            </>
           ) : (
-            <Button label="Next →" disabled={!canAdvance(state, teams)} onPress={() => setState((s) => goToStep(s, s.step + 1))} />
+            <Button label="Next →" disabled={!canAdvance(state, teams)} onPress={() => setState((s) => goToStep(s, s.step + 1))} {...(phone ? { style: { minWidth: 100, paddingHorizontal: 14 } } : {})} />
           )}
         </View>
       </View>
@@ -113,6 +145,9 @@ export default function NewGameScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row', backgroundColor: colors.paper },
+  topBar: { backgroundColor: colors.ink, flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 8 },
+  topTitle: { fontFamily: font.displayBold, fontSize: 18, color: colors.card },
+  compactButton: { minWidth: 48, paddingHorizontal: 0 },
   rail: { width: 260, backgroundColor: colors.ink, padding: 24 },
   wordmark: { fontFamily: font.displayItalic, fontSize: 22, color: colors.card },
   railTitle: { fontFamily: font.displayItalic, fontSize: 36, color: colors.card },

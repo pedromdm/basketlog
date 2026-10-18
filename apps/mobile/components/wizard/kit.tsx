@@ -23,9 +23,10 @@ export function Label({ children }: { children: ReactNode }) {
   return <Text style={kit.label}>{children}</Text>;
 }
 
-export function Field({ label, ...props }: { label: string } & TextInputProps) {
+/** `flex: 1` suits fields side by side in a row; pass `containerStyle={{ flex: 0 }}` in a column, where it would collapse the field. */
+export function Field({ label, containerStyle, ...props }: { label: string; containerStyle?: ViewStyle } & TextInputProps) {
   return (
-    <View style={{ flex: 1 }}>
+    <View style={[{ flex: 1 }, containerStyle]}>
       <Label>{label}</Label>
       <TextInput placeholderTextColor={colors.muted} style={kit.input} {...props} />
     </View>
@@ -38,17 +39,20 @@ export function Button({
   kind = 'ink',
   disabled,
   style,
+  accessibilityLabel,
 }: {
   label: string;
   onPress?: () => void;
   kind?: 'ink' | 'outline' | 'green';
   disabled?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
 }) {
   const bg = disabled ? colors.line3 : kind === 'green' ? colors.green : kind === 'ink' ? colors.ink : colors.card;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!disabled }}
       onPress={disabled ? undefined : onPress}
       style={[kit.button, { backgroundColor: bg, borderColor: kind === 'outline' ? colors.ink : bg }, style]}>
@@ -117,10 +121,14 @@ export function Stepper({
   );
 }
 
-export function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
+/** A switch row. `hint` is an optional smaller explanation under the label; both wrap instead of pushing the switch off. */
+export function Toggle({ label, hint, value, onChange }: { label: string; hint?: string; value: boolean; onChange: (value: boolean) => void }) {
   return (
     <View style={kit.toggleRow}>
-      <Text style={kit.toggleLabel}>{label}</Text>
+      <View style={{ flex: 1, flexShrink: 1 }}>
+        <Text style={kit.toggleLabel}>{label}</Text>
+        {hint ? <Text style={kit.toggleHint}>{hint}</Text> : null}
+      </View>
       <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.green, false: colors.line3 }} thumbColor={colors.card} />
     </View>
   );
@@ -151,7 +159,7 @@ export const kit = StyleSheet.create({
   },
   button: { height: 48, minWidth: 120, borderRadius: radius.button, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22 },
   buttonText: { fontFamily: font.display, fontSize: 18, letterSpacing: 0.5 },
-  segmented: { flexDirection: 'row', backgroundColor: colors.line2, borderRadius: radius.button, padding: 4, alignSelf: 'flex-start' },
+  segmented: { flexDirection: 'row', flexWrap: 'wrap', maxWidth: '100%', backgroundColor: colors.line2, borderRadius: radius.button, padding: 4, alignSelf: 'flex-start' },
   segment: { minHeight: 40, paddingHorizontal: 18, borderRadius: radius.small, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontFamily: font.displayBold, fontSize: 17 },
   stepper: { flex: 1, minWidth: 220, backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, padding: 14 },
@@ -161,6 +169,7 @@ export const kit = StyleSheet.create({
   stepButtonText: { fontFamily: font.displayBold, fontSize: 28, color: colors.ink },
   stepperValue: { fontFamily: font.display, fontSize: 30, color: colors.ink },
   stepperUnit: { fontFamily: font.bodyBold, fontSize: 14, color: colors.muted },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, minHeight: 56 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 8, gap: 12, minHeight: 56 },
+  toggleHint: { fontFamily: font.body, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
   toggleLabel: { fontFamily: font.bodyBold, fontSize: 16, color: colors.ink },
 });

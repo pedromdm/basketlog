@@ -12,7 +12,7 @@ async function GamesData() {
 
 export default function GamesPage() {
   return (
-    <main className="mx-auto w-full max-w-[1280px] flex-1 px-12 py-10">
+    <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
       <Suspense fallback={<p className="text-muted">Loading games…</p>}>
         <GamesData />
       </Suspense>

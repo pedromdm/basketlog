@@ -25,7 +25,7 @@ export function Court({ dots = [], dotRadius = 8, className }: { dots?: CourtDot
       {BANDS.map((i) =>
         i % 2 ? <rect key={i} x={i * (width / BANDS.length)} width={width / BANDS.length} height={height} fill="var(--wood-shadow)" opacity={0.22} /> : null,
       )}
-      <rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} fill="var(--green)" opacity={0.9} />
+      <rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} fill="var(--court-paint)" opacity={0.9} />
       <g {...line}>
         <rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} />
         <path d={`M ${keyMid - FT_CIRCLE_RADIUS} ${paint.height} A ${FT_CIRCLE_RADIUS} ${FT_CIRCLE_RADIUS} 0 0 0 ${keyMid + FT_CIRCLE_RADIUS} ${paint.height}`} />

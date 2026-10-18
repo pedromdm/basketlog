@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { activeEvents } from './derive';
-import { initTracker } from './chain';
+import { activeEvents, courtAfter } from './derive';
+import { foulsOf, initTracker, pendingFoulOutSub, teamBelowMinimum } from './chain';
 import { FIBA_RULES } from './rules';
 import { ROSTER, setup } from './test-helpers';
 
@@ -459,5 +459,184 @@ describe('resuming a game', () => {
     expect(state.events).toEqual(saved);
     expect(state.period).toBe(2);
     expect(state.nextSeq).toBe(saved.length + 1);
+  });
+});
+
+describe('syncEvents (a second device scoring the same game)', () => {
+  /** Events as another device would have saved them: its own ids, same game. */
+  function remoteEvents(period = 1) {
+    const other = setup({ rules: { askFastBreak: false, askAssist: false } });
+    if (period > 1) other.send({ type: 'setPeriod', period });
+    other.send({ type: 'setClock', clockMs: 300_000 });
+    other.send({ type: 'shot', side: 'away', playerId: 'a1', points: 3, made: true });
+    return other.state.events.map((e) => ({ ...e, id: `r-${e.id}`, groupId: `r-${e.groupId}` }));
+  }
+
+  it('adds the other device\'s events and keeps local ones the server does not list yet', () => {
+    const t = setup({ rules: { askFastBreak: false, askAssist: false } });
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    const local = t.state.events;
+
+    t.send({ type: 'syncEvents', events: remoteEvents() });
+
+    expect(t.state.events.map((e) => e.id)).toEqual([remoteEvents()[0]!.id, ...local.map((e) => e.id)]);
+    expect(t.send({ type: 'syncEvents', events: remoteEvents() }).state.events).toHaveLength(2);
+  });
+
+  it('never moves the sequence number backwards, so new events do not reuse a seq', () => {
+    const t = setup({ rules: { askFastBreak: false, askAssist: false } });
+    t.send({ type: 'syncEvents', events: remoteEvents() });
+    const r = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: true });
+    expect(r.emittedEvents[0]!.seq).toBeGreaterThan(Math.max(...remoteEvents().map((e) => e.seq)));
+  });
+
+  it('follows a later period and an advanced clock, but not while the local clock runs', () => {
+    const t = setup();
+    t.send({ type: 'syncEvents', events: remoteEvents(2) });
+    expect(t.state).toMatchObject({ period: 2, clockMs: 300_000, clockRunning: false });
+
+    const running = setup();
+    running.send({ type: 'setClock', clockMs: 500_000 });
+    running.send({ type: 'startClock' });
+    running.send({ type: 'syncEvents', events: remoteEvents() });
+    expect(running.state.clockMs).toBe(500_000);
+  });
+
+  it('keeps an open play and its prompt untouched', () => {
+    const t = setup();
+    t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 3, made: true });
+    const chain = t.state.chain;
+    t.send({ type: 'syncEvents', events: remoteEvents() });
+    expect(t.state.chain).toEqual(chain);
+  });
+});
+
+describe('askBlock rule', () => {
+  it('goes straight to the rebound after a miss when the block question is off', () => {
+    const t = setup({ rules: { askFastBreak: false, askBlock: false } });
+    const r = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+    expect(r.nextPrompt).toMatchObject({ kind: 'rebound' });
+    expect(r.emittedEvents.map((e) => e.type)).toEqual(['shot']);
+  });
+
+  it('still asks about a block when the rule is on or missing (older games)', () => {
+    for (const askBlock of [true, undefined]) {
+      const t = setup({ rules: { askFastBreak: false, ...(askBlock === undefined ? {} : { askBlock }) } });
+      const r = t.send({ type: 'shot', side: 'home', playerId: 'h1', points: 2, made: false });
+      expect(r.nextPrompt).toMatchObject({ kind: 'block' });
+    }
+  });
+});
+
+describe('foul out', () => {
+  function foulUp(t: ReturnType<typeof setup>, playerId: string, times: number) {
+    for (let i = 0; i < times; i++) {
+      t.send({ type: 'foul', side: 'home', playerId });
+      t.send({ type: 'answer', optionId: 'none' });
+    }
+  }
+
+  it('a player on the foul limit must be replaced, by someone not on court', () => {
+    const t = setup();
+    foulUp(t, 'h1', 4);
+    expect(pendingFoulOutSub(t.state)).toBeNull();
+    foulUp(t, 'h1', 1);
+    expect(foulsOf(t.state.events, 'h1')).toBe(5);
+    expect(pendingFoulOutSub(t.state)).toEqual({ side: 'home', outPlayerId: 'h1', mode: 'replace' });
+
+    const asked = t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    expect(asked.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h6', 'player:h7']);
+    t.send({ type: 'answer', optionId: 'player:h6' });
+    expect(pendingFoulOutSub(t.state)).toBeNull();
+  });
+
+  it('a fouled-out player cannot come back in, and waits while the foul play is open', () => {
+    const t = setup();
+    foulUp(t, 'h1', 5);
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    t.send({ type: 'answer', optionId: 'player:h6' });
+    const back = t.send({ type: 'sub', side: 'home', outPlayerId: 'h6' });
+    expect(back.nextPrompt?.options.map((o) => o.id)).toEqual(['player:h7']);
+    t.send({ type: 'cancel' });
+
+    const open = setup();
+    open.send({ type: 'foul', side: 'home', playerId: 'h2' });
+    expect(pendingFoulOutSub(open.state)).toBeNull();
+  });
+
+  /** Both substitutes get used up and fouled out, so the fifth foul on the last one leaves the bench empty. */
+  function benchExhausted(rules = {}) {
+    const t = setup({ rules });
+    foulUp(t, 'h1', 5);
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' });
+    t.send({ type: 'answer', optionId: 'player:h6' });
+    foulUp(t, 'h6', 5);
+    t.send({ type: 'sub', side: 'home', outPlayerId: 'h6' });
+    t.send({ type: 'answer', optionId: 'player:h7' });
+    foulUp(t, 'h7', 5);
+    return t;
+  }
+
+  it('FIBA: with nobody left to come in the player leaves and the team plays with four', () => {
+    const t = benchExhausted();
+    expect(pendingFoulOutSub(t.state)).toEqual({ side: 'home', outPlayerId: 'h7', mode: 'leave' });
+
+    const r = t.send({ type: 'leaveCourt', side: 'home', playerId: 'h7' });
+    expect(r.emittedEvents).toEqual([expect.objectContaining({ type: 'sub', outPlayerId: 'h7' })]);
+    expect(r.emittedEvents[0]!.inPlayerId).toBeUndefined();
+    expect(courtAfter(ROSTER.home.starters, t.state.events, 'home')).toEqual(['h2', 'h3', 'h4', 'h5']);
+    expect(pendingFoulOutSub(t.state)).toBeNull();
+  });
+
+  it('NBA: no team goes below five, so the fouled-out player stays when nobody can replace him', () => {
+    const t = benchExhausted({ playShortHanded: false });
+    expect(pendingFoulOutSub(t.state)).toBeNull();
+    expect(courtAfter(ROSTER.home.starters, t.state.events, 'home')).toHaveLength(5);
+  });
+
+  it('NBA: still asks for a substitute while one is available', () => {
+    const t = setup({ rules: { playShortHanded: false } });
+    foulUp(t, 'h1', 5);
+    expect(pendingFoulOutSub(t.state)).toMatchObject({ mode: 'replace' });
+  });
+
+  it('a player leaving with no replacement is not counted for minutes after he goes', () => {
+    const t = benchExhausted();
+    t.send({ type: 'leaveCourt', side: 'home', playerId: 'h7' });
+    expect(activeEvents(t.state.events).at(-1)).toMatchObject({ type: 'sub', outPlayerId: 'h7' });
+  });
+});
+
+describe('minimum players to continue', () => {
+  /** Home runs out of bench players and the last one to foul out leaves, so four stay on court. */
+  function shortHanded(rules: object) {
+    const t = setup({ rules });
+    const foul = (id: string) => {
+      for (let i = 0; i < 5; i++) {
+        t.send({ type: 'foul', side: 'home', playerId: id });
+        t.send({ type: 'answer', optionId: 'none' });
+      }
+    };
+    foul('h1'); t.send({ type: 'sub', side: 'home', outPlayerId: 'h1' }); t.send({ type: 'answer', optionId: 'player:h6' });
+    foul('h6'); t.send({ type: 'sub', side: 'home', outPlayerId: 'h6' }); t.send({ type: 'answer', optionId: 'player:h7' });
+    foul('h7'); t.send({ type: 'leaveCourt', side: 'home', playerId: 'h7' });
+    return t;
+  }
+
+  it('the game can go on with four when the minimum is two (FIBA)', () => {
+    expect(teamBelowMinimum(shortHanded({ minPlayersToContinue: 2 }).state)).toBeNull();
+  });
+
+  it('the game is over for a team that falls under the minimum', () => {
+    expect(teamBelowMinimum(shortHanded({ minPlayersToContinue: 5 }).state)).toEqual({ side: 'home', count: 4, min: 5 });
+  });
+
+  it('defaults to two when the rule is missing, and undoing the foul brings the player back', () => {
+    const t = shortHanded({});
+    expect(teamBelowMinimum(t.state)).toBeNull();
+    t.send({ type: 'undo' }); // the leave
+    t.send({ type: 'undo' }); // the foul that caused it
+    expect(courtAfter(ROSTER.home.starters, t.state.events, 'home')).toHaveLength(5);
+    expect(pendingFoulOutSub(t.state)).toBeNull();
   });
 });

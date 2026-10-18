@@ -1,4 +1,4 @@
-import { derive, type Derived, type DeriveSetup, type GameEvent, type GameRules, type Side, type TrackingMode } from "@basket-log/core";
+import { derive, periodLengthMs, playingTime, type PlayingTime, type Derived, type DeriveSetup, type GameEvent, type GameRules, type Side, type TrackingMode } from "@basket-log/core";
 import { fromRow } from "./events";
 import type { BasketClient } from "./index";
 
@@ -32,6 +32,8 @@ export interface GameView {
   events: GameEvent[];
   setup: DeriveSetup;
   derived: Derived;
+  /** Minutes and plus/minus per player id. */
+  playing: Record<string, PlayingTime>;
 }
 
 const toTeam = (t: { id: string; name: string; abbr: string; city: string | null; color_primary: string }): ViewTeam => ({
@@ -64,18 +66,28 @@ export async function loadGameView(client: BasketClient, gameId: string): Promis
     roster: { home: { starters: ids("home", true), bench: ids("home", false) }, away: { starters: ids("away", true), bench: ids("away", false) } },
   };
 
+  const rules = game.rules as unknown as GameRules;
+  // a finished game ran to the end of the last period it reached; a live one runs up to its latest event
+  let endMs: number | undefined;
+  if (game.status === "final" && gameEvents.length > 0) {
+    const lastPeriod = gameEvents.reduce((m, e) => Math.max(m, e.period), 1);
+    endMs = 0;
+    for (let p = 1; p <= lastPeriod; p++) endMs += periodLengthMs(rules, p);
+  }
+
   return {
     id: game.id,
     status: game.status,
     competition: game.competition,
     venue: game.venue,
     startsAt: game.starts_at,
-    rules: game.rules as unknown as GameRules,
+    rules,
     tracking: { home: game.home_tracking, away: game.away_tracking },
     teams: { home, away },
     players,
     events: gameEvents,
     setup,
     derived: derive(gameEvents, setup),
+    playing: playingTime(gameEvents, setup.roster, rules, endMs === undefined ? {} : { endMs }),
   };
 }

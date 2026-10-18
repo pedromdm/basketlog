@@ -69,11 +69,15 @@ export type TrackerAction =
       distanceFt?: number;
     }
   | { type: 'setPeriod'; period: number }
+  /** The server's events for this game (another device may have added some): merged into the local list. */
+  | { type: 'syncEvents'; events: GameEvent[] }
   | { type: 'done' }
   | { type: 'undo' }
   | { type: 'cancel' }
   | { type: 'quick'; event: 'oreb' | 'dreb' | 'ast' | 'stl' | 'blk'; side: Side; playerId: string | null }
   | { type: 'sub'; side: Side; outPlayerId: string }
+  /** A player leaves with no replacement (fouled out and nobody to come in). */
+  | { type: 'leaveCourt'; side: Side; playerId: string }
   | { type: 'timeout'; side: Side }
   | { type: 'startClock' }
   | { type: 'pauseClock' }
@@ -155,10 +159,54 @@ function onCourt(state: TrackerState, side: Side): string[] {
   return courtAfter(state.roster[side].starters, state.events, side);
 }
 
+/** Personal fouls a player has, ignoring voided plays. */
+export function foulsOf(events: GameEvent[], playerId: string): number {
+  return activeEvents(events).filter((e) => e.type === 'foul' && e.playerId === playerId).length;
+}
+
+/** A player who reached the foul limit cannot play any more. */
+export function isFouledOut(rules: GameRules, events: GameEvent[], playerId: string): boolean {
+  return foulsOf(events, playerId) >= rules.foulsToFoulOut;
+}
+
+/** Bench players who may come in: not on court and not fouled out. */
 function benchFor(state: TrackerState, side: Side): string[] {
   const court = onCourt(state, side);
   const { starters, bench } = state.roster[side];
-  return [...starters, ...bench].filter((id) => !court.includes(id));
+  return [...starters, ...bench].filter((id) => !court.includes(id) && !isFouledOut(state.rules, state.events, id));
+}
+
+/** Fewest players a team may have on court before the game cannot go on. */
+export const minPlayersToContinue = (rules: GameRules): number => rules.minPlayersToContinue ?? 2;
+
+/** A fully tracked team with too few players on court to continue, or null. The game is over for that team. */
+export function teamBelowMinimum(state: TrackerState): { side: Side; count: number; min: number } | null {
+  const min = minPlayersToContinue(state.rules);
+  for (const side of ['home', 'away'] as const) {
+    if (state.tracking[side] !== 'full') continue;
+    const count = onCourt(state, side).length;
+    if (count < min) return { side, count, min };
+  }
+  return null;
+}
+
+/**
+ * What must happen now for a fouled-out player still on the court of a fully tracked side, or null while a play is
+ * open (the foul's free throws come first) or when nothing is due:
+ * - `replace`: someone eligible is on the bench, so ask who comes in;
+ * - `leave`: nobody is, and the rules let the team play short (FIBA): he leaves and the team continues with fewer;
+ * - nothing when the rules keep him in (NBA: no team goes below five).
+ */
+export function pendingFoulOutSub(state: TrackerState): { side: Side; outPlayerId: string; mode: 'replace' | 'leave' } | null {
+  if (state.chain) return null;
+  for (const side of ['home', 'away'] as const) {
+    if (state.tracking[side] !== 'full') continue;
+    const out = onCourt(state, side).find((id) => isFouledOut(state.rules, state.events, id));
+    if (!out) continue;
+    if (benchFor(state, side).length > 0) return { side, outPlayerId: out, mode: 'replace' };
+    if (state.rules.playShortHanded !== false) return { side, outPlayerId: out, mode: 'leave' };
+  }
+  return null;
 }
 
 function buildPrompt(state: TrackerState, step: Step): Prompt {
@@ -265,7 +313,8 @@ function afterShot(state: TrackerState, side: Side, playerId: string | null, poi
   let step: Step | null = null;
   const full = state.tracking[side] === 'full';
   if (made && full && state.rules.askAssist && playerId !== null) step = { kind: 'assist', side, shooterId: playerId };
-  if (!made) step = { kind: 'block', side };
+  // a miss asks about a block first, unless the game turned that question off; then it goes straight to the rebound
+  if (!made) step = state.rules.askBlock === false ? { kind: 'rebound', side } : { kind: 'block', side };
   if (full && state.rules.askFastBreak) step = { kind: 'fastBreak', next: step };
   return step;
 }
@@ -283,13 +332,36 @@ function advance(state: TrackerState, chain: Chain, emitted: GameEvent[], next: 
   };
 }
 
-const STARTS_PLAY = new Set<TrackerAction['type']>(['shot', 'ft', 'turnover', 'foul', 'sub', 'timeout', 'quick']);
+const STARTS_PLAY = new Set<TrackerAction['type']>(['shot', 'ft', 'turnover', 'foul', 'sub', 'leaveCourt', 'timeout', 'quick']);
 
 export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEnv): ReduceResult {
   if (state.chain && STARTS_PLAY.has(action.type)) {
     return { state, emittedEvents: [], nextPrompt: buildPrompt(state, state.chain.step) };
   }
   switch (action.type) {
+    case 'syncEvents': {
+      // server order first, then local events the server doesn't list yet (still in the outbox)
+      const seen = new Set(action.events.map((e) => e.id));
+      const events = [...action.events, ...state.events.filter((e) => !seen.has(e.id))];
+      const lastSeq = events.reduce((max, e) => Math.max(max, e.seq), 0);
+      const lastPeriod = events.reduce((max, e) => Math.max(max, e.period), 1);
+      let { period, clockMs, shotClockMs, clockRunning } = state;
+      if (lastPeriod > period) {
+        // another device moved to a later period: follow it, paused at its latest clock
+        period = lastPeriod;
+        clockMs = Math.min(...events.filter((e) => e.period === period).map((e) => e.clockMs));
+        shotClockMs = state.rules.shotClock * 1000;
+        clockRunning = false;
+      } else if (!clockRunning) {
+        const latest = Math.min(clockMs, ...events.filter((e) => e.period === period).map((e) => e.clockMs));
+        clockMs = latest;
+      }
+      return {
+        state: { ...state, events, nextSeq: Math.max(state.nextSeq, lastSeq + 1), period, clockMs, shotClockMs, clockRunning },
+        emittedEvents: [],
+        nextPrompt: null,
+      };
+    }
     case 'setClock':
       return {
         state: { ...state, clockMs: action.clockMs, shotClockMs: action.shotClockMs ?? state.shotClockMs },
@@ -352,6 +424,13 @@ export function reduce(state: TrackerState, action: TrackerAction, env: ReduceEn
       if (state.tracking[action.side] === 'team_only') return idle(state);
       const step: Step = { kind: 'sub', side: action.side, outId: action.outPlayerId };
       return advance(state, { groupId: env.newId(), step }, [], step);
+    }
+    case 'leaveCourt': {
+      if (state.tracking[action.side] === 'team_only' || !onCourt(state, action.side).includes(action.playerId)) return idle(state);
+      const event = makeEvent(state, env, env.newId(), {
+        type: 'sub', side: action.side, playerId: action.playerId, outPlayerId: action.playerId,
+      });
+      return idle(emit(state, [event]), [event]);
     }
     case 'timeout': {
       const event = makeEvent(state, env, env.newId(), { type: 'timeout', side: action.side });

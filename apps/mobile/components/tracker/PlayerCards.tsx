@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { font } from '../wizard/kit';
 import { playerName } from './format';
+import { FoulBadge } from './ui';
 import type { ReadyTracker } from './useTrackerUi';
 
 /** The five on-court players of a side as selectable cards (tablet left column). */
@@ -41,9 +42,7 @@ export function PlayerCards({
               </Text>
               <Text style={[styles.meta, selected && { color: colors.greenTint }]}>{line?.pts ?? 0} PTS</Text>
             </View>
-            <View style={[styles.pf, pf >= game.rules.foulsToFoulOut && { backgroundColor: colors.ink }]}>
-              <Text style={[styles.pfText, pf >= game.rules.foulsToFoulOut && { color: colors.card }]}>{pf} PF</Text>
-            </View>
+            <FoulBadge fouls={pf} limit={game.rules.foulsToFoulOut} />
           </Pressable>
         );
       })}
@@ -51,7 +50,7 @@ export function PlayerCards({
   );
 }
 
-/** Compact player tiles for the phone layouts (height 64). */
+/** Compact player tiles for the phone layouts (height 52). */
 export function PlayerTiles({
   t,
   side,
@@ -80,6 +79,7 @@ export function PlayerTiles({
             <Text numberOfLines={1} style={[styles.tileName, selected && styles.onSelected]}>
               {playerName(game, id).toUpperCase()}
             </Text>
+            <FoulBadge fouls={derived.players[id]?.pf ?? 0} limit={game.rules.foulsToFoulOut} />
           </Pressable>
         );
       })}
@@ -105,11 +105,9 @@ const styles = StyleSheet.create({
   number: { fontFamily: font.displayBold, fontSize: 32, color: colors.ink, minWidth: 40 },
   name: { fontFamily: font.bodyBold, fontSize: 15, color: colors.ink },
   meta: { fontFamily: font.body, fontSize: 12, color: colors.muted },
-  pf: { backgroundColor: colors.line2, borderRadius: radius.badge, paddingHorizontal: 6, paddingVertical: 2 },
-  pfText: { fontFamily: font.bodyBold, fontSize: 11, color: colors.muted },
   tile: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.button,

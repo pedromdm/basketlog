@@ -22,9 +22,11 @@ export interface CourtProps {
   disabled?: boolean;
   /** Only draw shots of this side (the shot chart of the selected team). */
   onlySide?: 'home' | 'away' | null;
+  /** Only draw this player's shots (the selected player); null shows the whole side. */
+  onlyPlayer?: string | null;
 }
 
-export function Court({ shots, sideColors, pending, onTap, disabled, onlySide }: CourtProps) {
+export function Court({ shots, sideColors, pending, onTap, disabled, onlySide, onlyPlayer }: CourtProps) {
   const [size, setSize] = useState<{ w: number; h: number }>({ w: W, h: H });
   const onLayout = (e: LayoutChangeEvent) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
@@ -45,7 +47,7 @@ export function Court({ shots, sideColors, pending, onTap, disabled, onlySide }:
           {PLANKS.map((i) => (
             <Rect key={i} x={(W / PLANKS.length) * i} y={0} width={W / PLANKS.length} height={H} fill={colors.woodShadow} opacity={i % 2 ? 0.18 : 0} />
           ))}
-          <Rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} fill={colors.green} />
+          <Rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} fill={colors.courtPaint} />
           <G stroke={colors.card} strokeWidth={lineWidth} fill="none">
             <Rect x={1} y={1} width={W - 2} height={H - 2} />
             <Rect x={paint.x} y={paint.y} width={paint.width} height={paint.height} />
@@ -59,7 +61,7 @@ export function Court({ shots, sideColors, pending, onTap, disabled, onlySide }:
             <Path d={`M ${basket.x - FT_CIRCLE_R} ${H} A ${FT_CIRCLE_R} ${FT_CIRCLE_R} 0 0 1 ${basket.x + FT_CIRCLE_R} ${H}`} />
           </G>
           {shots
-            .filter((s) => !onlySide || s.side === onlySide)
+            .filter((s) => (!onlySide || s.side === onlySide) && (!onlyPlayer || s.playerId === onlyPlayer))
             .map((s, i) => (
               <Circle
                 key={i}

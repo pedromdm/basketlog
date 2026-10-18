@@ -12,6 +12,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/games/[id]/box/
     teams: { home: { name: game.teams.home.name }, away: { name: game.teams.away.name } },
     players: game.players,
     lines: game.derived.players,
+    playing: game.playing,
   });
   const filename = `${slug(game.teams.home.name)}-vs-${slug(game.teams.away.name)}.csv`;
   return new Response(csv, {

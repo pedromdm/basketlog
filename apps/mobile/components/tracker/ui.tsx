@@ -9,7 +9,7 @@ import type { SyncInfo, TrackerGame } from '@/lib/tracker/types';
 import { syncText } from './format';
 import { font } from '../wizard/kit';
 
-export const MIN_TARGET = 48;
+export const MIN_TARGET = 44;
 
 type Tone = 'green' | 'greenDark' | 'miss' | 'neutral' | 'dark' | 'outline' | 'ghost';
 
@@ -86,6 +86,23 @@ export function SyncPill({ sync }: { sync: SyncInfo }) {
   );
 }
 
+/**
+ * Small personal-foul count for the top right corner of a player button: white up to the foul before the limit,
+ * orange on that last foul before fouling out (4 of 5), red at the limit (the player must leave the court).
+ */
+export function FoulBadge({ fouls, limit }: { fouls: number; limit: number }) {
+  const out = fouls >= limit;
+  const warn = !out && fouls === limit - 1;
+  const bg = out ? colors.foulOut : warn ? colors.foulWarn : colors.card;
+  return (
+    <View
+      accessibilityLabel={`${fouls} fouls`}
+      style={[styles.foulBadge, { backgroundColor: bg, borderColor: out ? colors.foulOut : warn ? colors.foulWarn : colors.line3 }]}>
+      <Text style={[styles.foulText, { color: out ? colors.card : colors.ink }]}>{fouls}</Text>
+    </View>
+  );
+}
+
 export function TeamDot({ color, size = 10 }: { color: string; size?: number }) {
   return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />;
 }
@@ -113,11 +130,13 @@ export function TeamToggle({ game, side, onChange }: { game: TrackerGame; side: 
 
 const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', backgroundColor: colors.line, borderRadius: radius.button, padding: 4 },
-  segment: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.small },
+  segment: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.small },
   segmentText: { fontFamily: font.displayBold, fontSize: 18, letterSpacing: 0.3 },
   btn: { alignItems: 'center', justifyContent: 'center', borderRadius: radius.button, borderWidth: 1.5, paddingHorizontal: 8 },
   btnText: { fontFamily: font.displayBold, fontSize: 18, letterSpacing: 0.3 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 10, minHeight: 28 },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  foulBadge: { position: 'absolute', top: 3, right: 3, minWidth: 18, height: 18, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  foulText: { fontFamily: font.bodyBold, fontSize: 11 },
   pillText: { fontFamily: font.bodyBold, fontSize: 12, color: colors.card },
 });

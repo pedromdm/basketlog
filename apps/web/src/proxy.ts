@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Refreshes the Supabase session cookie and sends signed-out visitors of protected pages to /login. */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -26,6 +28,13 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // The hub streams under cacheComponents, so a missing game can't change the status from the page: answer 404 here.
+  const gameId = pathname.match(/^\/games\/([^/]+)/)?.[1] ?? pathname.match(/^\/players\/[^/]+\/games\/([^/]+)/)?.[1];
+  if (gameId) {
+    const found = UUID.test(gameId) && (await supabase.from("games").select("id").eq("id", gameId).maybeSingle()).data;
+    if (!found) return NextResponse.rewrite(new URL("/not-found-game", request.url), { status: 404 });
   }
   return response;
 }

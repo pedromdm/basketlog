@@ -29,7 +29,7 @@ export default function SignInScreen() {
         </Text>
         <Text style={styles.subtitle}>Sign in to keep score.</Text>
 
-        <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" />
+        <Field containerStyle={styles.field} label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" />
         <Button
           label="Email me a sign-in link"
           disabled={busy || !email.includes('@')}
@@ -38,7 +38,7 @@ export default function SignInScreen() {
 
         <View style={styles.divider} />
         <Label>Or use a password (local dev account)</Label>
-        <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
+        <Field containerStyle={styles.field} label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
         <Button
           kind="outline"
           label="Sign in"
@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
   card: { width: '100%', maxWidth: 420, backgroundColor: colors.card, borderRadius: 16, padding: 24, gap: 12, borderWidth: 1.5, borderColor: colors.line },
   wordmark: { fontFamily: font.displayItalic, fontSize: 36, color: colors.ink },
   subtitle: { fontFamily: font.body, fontSize: 15, color: colors.muted, marginBottom: 6 },
+  field: { flex: 0 },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 6 },
   message: { fontFamily: font.bodyBold, fontSize: 14, color: colors.ink },
 });

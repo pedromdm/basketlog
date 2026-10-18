@@ -10,6 +10,8 @@ export interface QueuedEvent {
 /** Persistence for the outbox. SQLite on devices, memory on web. */
 export interface QueueStorage {
   insert(item: QueuedEvent): Promise<void>;
+  /** Same as insert, but completes before returning, so an event is on disk before the UI moves on. */
+  insertSync(item: QueuedEvent): void;
   /** Unsynced items, oldest first. */
   pending(gameId?: string): Promise<QueuedEvent[]>;
   markSynced(ids: string[]): Promise<void>;
@@ -32,6 +34,13 @@ export class EventQueue {
     }
   }
 
+  /** Synchronous variant of enqueue: the write has finished when this returns. */
+  enqueueSync(rows: EventRow[]): void {
+    for (const row of rows) {
+      this.storage.insertSync({ id: row.id as string, gameId: row.game_id, row, createdAt: this.now() });
+    }
+  }
+
   listPending(gameId?: string): Promise<QueuedEvent[]> {
     return this.storage.pending(gameId);
   }
@@ -49,6 +58,10 @@ export class MemoryStorage implements QueueStorage {
   private items = new Map<string, QueuedEvent & { synced: boolean }>();
 
   async insert(item: QueuedEvent): Promise<void> {
+    this.insertSync(item);
+  }
+
+  insertSync(item: QueuedEvent): void {
     if (!this.items.has(item.id)) this.items.set(item.id, { ...item, synced: false });
   }
 

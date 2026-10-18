@@ -70,9 +70,11 @@ export interface NewGameInput {
   competition?: string;
   venue?: string;
   startsAt?: string;
+  /** `live` (default) starts the game now; `scheduled` only saves it. */
+  status?: 'live' | 'scheduled';
 }
 
-/** Creates the game, snapshots rules and rosters, and marks it live, atomically (see create_game()). */
+/** Creates the game, snapshots rules and rosters, and marks it live (or scheduled), atomically (see create_game()). */
 export async function createGame(client: BasketClient, input: NewGameInput): Promise<string> {
   return check(
     await client.rpc('create_game', {
@@ -86,6 +88,7 @@ export async function createGame(client: BasketClient, input: NewGameInput): Pro
       p_competition: input.competition,
       p_venue: input.venue,
       p_starts_at: input.startsAt,
+      p_status: input.status,
     }),
   );
 }
