@@ -59,7 +59,7 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 
 - `packages/core/src/setup.ts`: `validateRoster` (unique jersey numbers, required names) and `validateNewGame` (feeds the wizard's "Fix before starting" list). A `team_only` side needs no starters.
 - `packages/db/src/queries.ts`: team/player CRUD, `listRulePresets`, and `createGame`, which calls the `create_game()` SQL function (atomic: game row, rules snapshot, roster snapshot, status `live`). Removing a player only sets `active = false`; the jersey-number unique index covers active players only.
-- Web: `/teams` (screen 4b) and `/login` (magic link), Supabase SSR clients in `apps/web/src/lib/supabase`, session refresh in `src/proxy.ts`. Mobile: sign-in (`app/sign-in.tsx`), wizard (`app/new-game.tsx`, logic in `lib/wizard.ts`), placeholder `app/game/[id].tsx` until Phase 3. Both apps read local Supabase URL/key from `.env` (copy `.env.example`).
+- Web: `/teams` (screen 4b) and `/login` (magic link), Supabase SSR clients in `apps/web/src/lib/supabase`, session refresh in `src/middleware.ts (named middleware, not proxy: the Cloudflare adapter hangs on the Node-runtime proxy)`. Mobile: sign-in (`app/sign-in.tsx`), wizard (`app/new-game.tsx`, logic in `lib/wizard.ts`), placeholder `app/game/[id].tsx` until Phase 3. Both apps read local Supabase URL/key from `.env` (copy `.env.example`).
 - `pnpm install` on Windows can fail on `typescript-eslint` while `rtk` hides it; run `rtk proxy pnpm install`. A clean `node_modules` fixes it.
 - Not verified in a browser/device: magic-link round trip, teams autosave, wizard to Start game. The date field is a native picker (`DateField` in `components/wizard/kit.tsx`; a validated text field on web). Google/Apple buttons are disabled stubs.
 
@@ -79,7 +79,7 @@ Design tokens live in `packages/ui/src/tokens.ts`; `apps/web/src/app/globals.css
 - Web routes: `/games` (1a), `/games/[id]` hub layout + play-by-play (1d), `/games/[id]/box` (1e), `/shots` (1f, filters via searchParams), `/recap` (1g), `/players/[id]/games/[gameId]` (1h). `src/lib/game-data.ts` `loadGameView` builds everything from Supabase rows; `getGameView` caches it per request. Pages sit under `cacheComponents`, so request data must be inside `<Suspense>`.
 - Live games: `components/live-refresh.tsx` subscribes to Realtime (`game_events` INSERT, `games` UPDATE) and calls `router.refresh()` (throttled 500 ms). Open Graph image: `app/games/[id]/opengraph-image.tsx`.
 - `/games` shows square cards in an auto-fill grid (4 / 2 / 1 per row by width). `loadGameCards` (`src/lib/games-list.ts`) adds competition, points per period and each side's top scorer; there is no W–L record (not stored). The events query is one `in(game_ids)` call, so it is capped by Supabase's default 1000 rows.
-- `src/proxy.ts` answers 404 for unknown or invisible game ids (the hub streams, so a page can't set the status). The shot chart's player and period filters are multi-select (comma-separated `player` / `period` params). Pages were checked via rendered HTML and an OG image render, not visually against the screenshots.
+- `src/middleware.ts (named middleware, not proxy: the Cloudflare adapter hangs on the Node-runtime proxy)` answers 404 for unknown or invisible game ids (the hub streams, so a page can't set the status). The shot chart's player and period filters are multi-select (comma-separated `player` / `period` params). Pages were checked via rendered HTML and an OG image render, not visually against the screenshots.
 
 ## Phase 5 (viewer, admin, CSV, push)
 
