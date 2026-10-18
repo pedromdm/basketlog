@@ -3,8 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // cacheComponents / partialPrefetching are off: with them the Cloudflare adapter hangs every request ("worker's code had hung").
   turbopack: {
     rules: {
       "*.css": {
