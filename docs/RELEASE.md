@@ -27,3 +27,4 @@ Config is in the repo; the steps below need accounts and secrets that are not.
 - CLI route: `npx wrangler login`, then `pnpm -F @basket-log/web deploy`. Build on Linux/WSL or in Cloudflare's builder; the adapter is unreliable on native Windows.
 - Add the Workers URL to Supabase Auth → URL Configuration (Site URL and redirects) so the magic link returns to it.
 - Not verified: `proxy.ts` (Node runtime) and `cacheComponents` on the adapter. If the build or `/games` fails, test with `preview` first.
+- Server-side Sentry (`instrumentation.ts`) was removed: the instrumentation hook fails to load on the Cloudflare adapter and every request returned 500. Browser Sentry (`instrumentation-client.ts`) stays and is inert without a DSN. To bring server Sentry back, test it with `preview` first.
