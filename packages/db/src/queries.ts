@@ -72,6 +72,9 @@ export interface NewGameInput {
   startsAt?: string;
   /** `live` (default) starts the game now; `scheduled` only saves it. */
   status?: 'live' | 'scheduled';
+  competitionId?: string;
+  roundId?: string;
+  groupId?: string;
 }
 
 /** Creates the game, snapshots rules and rosters, and marks it live (or scheduled), atomically (see create_game()). */
@@ -89,6 +92,9 @@ export async function createGame(client: BasketClient, input: NewGameInput): Pro
       p_venue: input.venue,
       p_starts_at: input.startsAt,
       p_status: input.status,
+      p_competition_id: input.competitionId,
+      p_round_id: input.roundId,
+      p_group_id: input.groupId,
     }),
   );
 }

@@ -18,3 +18,5 @@ export * from './queries';
 export * from './events';
 
 export * from './game-data';
+
+export * from './competitions';

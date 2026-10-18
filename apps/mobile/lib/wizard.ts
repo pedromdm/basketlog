@@ -1,5 +1,5 @@
 import { FIBA_RULES, validateNewGame, type GameDraft, type GameRules, type Side, type TrackingMode } from '@basket-log/core';
-import type { NewGameInput, TeamWithPlayers } from '@basket-log/db';
+import type { CompetitionTree, NewGameInput, TeamWithPlayers } from '@basket-log/db';
 
 export const STEPS = [
   { id: 'matchup', title: 'Matchup', hint: 'Teams, venue, date' },
@@ -12,6 +12,9 @@ export interface WizardState {
   step: number;
   teamIds: Record<Side, string | null>;
   competition: string;
+  /** Set when the game belongs to a competition created on the website (the `competition` text is then its name). */
+  competitionId: string | null;
+  roundId: string | null;
   venue: string;
   /** YYYY-MM-DD, optional. */
   date: string;
@@ -26,6 +29,8 @@ export const initialWizard = (rules: GameRules = FIBA_RULES): WizardState => ({
   step: 0,
   teamIds: { home: null, away: null },
   competition: '',
+  competitionId: null,
+  roundId: null,
   venue: '',
   date: '',
   time: '',
@@ -110,7 +115,18 @@ export function startsAtOf(date: string, time: string): string | undefined {
   return Number.isNaN(at.getTime()) ? undefined : at.toISOString();
 }
 
-export function toNewGameInput(state: WizardState): NewGameInput {
+/** Competitions the home team is enrolled in (the only ones a game of that team can belong to). */
+export function competitionsFor(competitions: CompetitionTree[], teamId: string | null): CompetitionTree[] {
+  return teamId ? competitions.filter((c) => c.teamIds.includes(teamId)) : [];
+}
+
+/** The group the home team plays in for the chosen round, if the website assigned one. */
+export function groupFor(competitions: CompetitionTree[], roundId: string | null, teamId: string | null): string | undefined {
+  if (!roundId || !teamId) return undefined;
+  return competitions.flatMap((c) => c.assignments).find((a) => a.round_id === roundId && a.team_id === teamId)?.group_id;
+}
+
+export function toNewGameInput(state: WizardState, groupId?: string): NewGameInput {
   const date = state.date.trim();
   return {
     homeTeamId: state.teamIds.home as string,
@@ -119,6 +135,9 @@ export function toNewGameInput(state: WizardState): NewGameInput {
     tracking: state.tracking,
     starters: state.starters,
     ...(state.competition.trim() ? { competition: state.competition.trim() } : {}),
+    ...(state.competitionId ? { competitionId: state.competitionId } : {}),
+    ...(state.competitionId && state.roundId ? { roundId: state.roundId } : {}),
+    ...(state.competitionId && groupId ? { groupId } : {}),
     ...(state.venue.trim() ? { venue: state.venue.trim() } : {}),
     ...(startsAtOf(date, state.time) ? { startsAt: startsAtOf(date, state.time) as string } : {}),
   };

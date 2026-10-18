@@ -23,7 +23,107 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "game_events": {
+            "competition_groups": {
+                  Row: {
+                    "id": string,"name": string,"phase_id": string,"position": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"name": string,"phase_id": string,"position": number
+                  }
+                  Update: {
+                    "id"?: string,"name"?: string,"phase_id"?: string,"position"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "competition_groups_phase_id_fkey"
+      columns: ["phase_id"]
+isOneToOne: false
+      referencedRelation: "competition_phases"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"competition_phases": {
+                  Row: {
+                    "competition_id": string,"id": string,"name": string,"position": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "competition_id": string,"id"?: string,"name": string,"position": number
+                  }
+                  Update: {
+                    "competition_id"?: string,"id"?: string,"name"?: string,"position"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "competition_phases_competition_id_fkey"
+      columns: ["competition_id"]
+isOneToOne: false
+      referencedRelation: "competitions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"competition_rounds": {
+                  Row: {
+                    "id": string,"name": string,"phase_id": string,"position": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"name": string,"phase_id": string,"position": number
+                  }
+                  Update: {
+                    "id"?: string,"name"?: string,"phase_id"?: string,"position"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "competition_rounds_phase_id_fkey"
+      columns: ["phase_id"]
+isOneToOne: false
+      referencedRelation: "competition_phases"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"competition_teams": {
+                  Row: {
+                    "competition_id": string,"team_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "competition_id": string,"team_id": string
+                  }
+                  Update: {
+                    "competition_id"?: string,"team_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "competition_teams_competition_id_fkey"
+      columns: ["competition_id"]
+isOneToOne: false
+      referencedRelation: "competitions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "competition_teams_team_id_fkey"
+      columns: ["team_id"]
+isOneToOne: false
+      referencedRelation: "teams"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"competitions": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"name": string,"season": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"season"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name"?: string,"season"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"game_events": {
                   Row: {
                     "clock_ms": number,"created_at": string,"created_by": string,"device_seq": number,"game_id": string,"group_id": string,"id": string,"payload": NonNullable<Json>,"period": number,"player_id": string | null,"server_seq": number,"side": Database["public"]['Enums']["side"],"type": Database["public"]['Enums']["event_type"]
                   }
@@ -97,14 +197,14 @@ isOneToOne: false
                   ]
                 },"games": {
                   Row: {
-                    "away_team_id": string,"away_tracking": Database["public"]['Enums']["tracking_mode"],"competition": string | null,"created_at": string,"created_by": string | null,"home_team_id": string,"home_tracking": Database["public"]['Enums']["tracking_mode"],"id": string,"is_public": boolean,"league_id": string | null,"rules": NonNullable<Json>,"starts_at": string | null,"status": Database["public"]['Enums']["game_status"],"venue": string | null
+                    "away_team_id": string,"away_tracking": Database["public"]['Enums']["tracking_mode"],"competition": string | null,"competition_id": string | null,"created_at": string,"created_by": string | null,"group_id": string | null,"home_team_id": string,"home_tracking": Database["public"]['Enums']["tracking_mode"],"id": string,"is_public": boolean,"league_id": string | null,"round_id": string | null,"rules": NonNullable<Json>,"starts_at": string | null,"status": Database["public"]['Enums']["game_status"],"venue": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "away_team_id": string,"away_tracking"?: Database["public"]['Enums']["tracking_mode"],"competition"?: string | null,"created_at"?: string,"created_by"?: string | null,"home_team_id": string,"home_tracking"?: Database["public"]['Enums']["tracking_mode"],"id"?: string,"is_public"?: boolean,"league_id"?: string | null,"rules": NonNullable<Json>,"starts_at"?: string | null,"status"?: Database["public"]['Enums']["game_status"],"venue"?: string | null
+                    "away_team_id": string,"away_tracking"?: Database["public"]['Enums']["tracking_mode"],"competition"?: string | null,"competition_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"group_id"?: string | null,"home_team_id": string,"home_tracking"?: Database["public"]['Enums']["tracking_mode"],"id"?: string,"is_public"?: boolean,"league_id"?: string | null,"round_id"?: string | null,"rules": NonNullable<Json>,"starts_at"?: string | null,"status"?: Database["public"]['Enums']["game_status"],"venue"?: string | null
                   }
                   Update: {
-                    "away_team_id"?: string,"away_tracking"?: Database["public"]['Enums']["tracking_mode"],"competition"?: string | null,"created_at"?: string,"created_by"?: string | null,"home_team_id"?: string,"home_tracking"?: Database["public"]['Enums']["tracking_mode"],"id"?: string,"is_public"?: boolean,"league_id"?: string | null,"rules"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: Database["public"]['Enums']["game_status"],"venue"?: string | null
+                    "away_team_id"?: string,"away_tracking"?: Database["public"]['Enums']["tracking_mode"],"competition"?: string | null,"competition_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"group_id"?: string | null,"home_team_id"?: string,"home_tracking"?: Database["public"]['Enums']["tracking_mode"],"id"?: string,"is_public"?: boolean,"league_id"?: string | null,"round_id"?: string | null,"rules"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: Database["public"]['Enums']["game_status"],"venue"?: string | null
                   }
                   Relationships: [
                     {
@@ -112,6 +212,18 @@ isOneToOne: false
       columns: ["away_team_id"]
 isOneToOne: false
       referencedRelation: "teams"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "games_competition_id_fkey"
+      columns: ["competition_id"]
+isOneToOne: false
+      referencedRelation: "competitions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "games_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "competition_groups"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "games_home_team_id_fkey"
@@ -124,6 +236,44 @@ isOneToOne: false
       columns: ["league_id"]
 isOneToOne: false
       referencedRelation: "leagues"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "games_round_id_fkey"
+      columns: ["round_id"]
+isOneToOne: false
+      referencedRelation: "competition_rounds"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"group_assignments": {
+                  Row: {
+                    "group_id": string,"round_id": string,"team_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "group_id": string,"round_id": string,"team_id": string
+                  }
+                  Update: {
+                    "group_id"?: string,"round_id"?: string,"team_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_assignments_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "competition_groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_assignments_round_id_fkey"
+      columns: ["round_id"]
+isOneToOne: false
+      referencedRelation: "competition_rounds"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_assignments_team_id_fkey"
+      columns: ["team_id"]
+isOneToOne: false
+      referencedRelation: "teams"
       referencedColumns: ["id"]
     }
                   ]
@@ -164,6 +314,26 @@ isOneToOne: false
       columns: ["team_id"]
 isOneToOne: false
       referencedRelation: "teams"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notified_events": {
+                  Row: {
+                    "created_at": string,"game_id": string,"kind": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"game_id": string,"kind": string
+                  }
+                  Update: {
+                    "created_at"?: string,"game_id"?: string,"kind"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notified_events_game_id_fkey"
+      columns: ["game_id"]
+isOneToOne: false
+      referencedRelation: "games"
       referencedColumns: ["id"]
     }
                   ]
@@ -264,14 +434,23 @@ isOneToOne: false
             "assign_scorekeeper":
 { Args: { "p_email": string,"p_game_id": string }; Returns: string
                            },
+"can_manage_competition":
+{ Args: { "p_competition_id": string }; Returns: boolean
+                           },
 "can_manage_game":
 { Args: { "p_game_id": string }; Returns: boolean
                            },
 "can_view_game":
 { Args: { "p_game_id": string }; Returns: boolean
                            },
+"competition_of_phase":
+{ Args: { "p_phase_id": string }; Returns: string
+                           },
+"competition_of_round":
+{ Args: { "p_round_id": string }; Returns: string
+                           },
 "create_game":
-{ Args: { "p_away_starters"?: (string)[],"p_away_team_id": string,"p_away_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_competition"?: string,"p_home_starters"?: (string)[],"p_home_team_id": string,"p_home_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_rules": Json,"p_starts_at"?: string,"p_status"?: Database["public"]['Enums']["game_status"],"p_venue"?: string }; Returns: string
+{ Args: { "p_away_starters"?: (string)[],"p_away_team_id": string,"p_away_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_competition"?: string,"p_competition_id"?: string,"p_group_id"?: string,"p_home_starters"?: (string)[],"p_home_team_id": string,"p_home_tracking"?: Database["public"]['Enums']["tracking_mode"],"p_round_id"?: string,"p_rules": Json,"p_starts_at"?: string,"p_status"?: Database["public"]['Enums']["game_status"],"p_venue"?: string }; Returns: string
                            },
 "is_game_open":
 { Args: { "p_game_id": string }; Returns: boolean

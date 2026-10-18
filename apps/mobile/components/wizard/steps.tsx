@@ -1,11 +1,12 @@
 import type { GameRules, Side } from '@basket-log/core';
-import type { TeamWithPlayers } from '@basket-log/db';
+import type { CompetitionTree, TeamWithPlayers } from '@basket-log/db';
 import { colors, radius } from '@basket-log/ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   applyPreset,
+  competitionsFor,
   problems,
   rulesSummary,
   selectTeam,
@@ -23,6 +24,7 @@ export interface StepProps {
   state: WizardState;
   teams: TeamWithPlayers[];
   presets: { name: string; rules: GameRules }[];
+  competitions: CompetitionTree[];
   update: (next: (s: WizardState) => WizardState) => void;
   /** Narrow screen (phone portrait): columns stack and fields go one per row. */
   narrow?: boolean;
@@ -33,8 +35,17 @@ const SIDES: { side: Side; title: string }[] = [
   { side: 'away', title: 'Away' },
 ];
 
-export function MatchupStep({ state, teams, update, narrow = false }: StepProps) {
+export function MatchupStep({ state, teams, competitions, update, narrow = false }: StepProps) {
   const col = narrow ? { flex: 0 } : undefined;
+  const eligible = competitionsFor(competitions, state.teamIds.home);
+  const chosen = eligible.find((c) => c.id === state.competitionId) ?? null;
+  const rounds = chosen ? chosen.phases.flatMap((p) => p.rounds.map((r) => ({ id: r.id, label: `${p.name} · ${r.name}` }))) : [];
+
+  // changing the home team can leave a competition it is not enrolled in
+  useEffect(() => {
+    if (state.competitionId && !chosen) update((s) => ({ ...s, competitionId: null, roundId: null, competition: '' }));
+  }, [chosen, state.competitionId, update]);
+
   return (
     <View>
       <Title title="Matchup" subtitle="Pick the home and away teams. Teams and rosters are managed on the website." />
@@ -65,6 +76,24 @@ export function MatchupStep({ state, teams, update, narrow = false }: StepProps)
           </View>
         ))}
       </View>
+      {eligible.length > 0 ? (
+        <View style={{ marginTop: 22, gap: 8 }}>
+          <Label>Competition</Label>
+          <View style={styles.grid}>
+            <Choice label="None" on={!chosen} onPress={() => update((s) => ({ ...s, competitionId: null, roundId: null, competition: '' }))} />
+            {eligible.map((c) => (
+              <Choice key={c.id} label={c.name} on={chosen?.id === c.id} onPress={() => update((s) => ({ ...s, competitionId: c.id, roundId: null, competition: c.name }))} />
+            ))}
+          </View>
+          {rounds.length > 0 ? (
+            <View style={styles.grid}>
+              {rounds.map((r) => (
+                <Choice key={r.id} label={r.label} on={state.roundId === r.id} onPress={() => update((s) => ({ ...s, roundId: s.roundId === r.id ? null : r.id }))} />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       <View style={{ flexDirection: narrow ? 'column' : 'row', gap: 14, marginTop: 22 }}>
         <Field {...(col ? { containerStyle: col } : {})} label="Competition" value={state.competition} onChangeText={(competition) => update((s) => ({ ...s, competition }))} placeholder="League, cup, friendly" />
         <Field {...(col ? { containerStyle: col } : {})} label="Venue" value={state.venue} onChangeText={(venue) => update((s) => ({ ...s, venue }))} placeholder="Arena" />
@@ -72,6 +101,14 @@ export function MatchupStep({ state, teams, update, narrow = false }: StepProps)
         <TimeField {...(col ? { containerStyle: col } : {})} label="Time" value={state.time} onChange={(time) => update((s) => ({ ...s, time }))} />
       </View>
     </View>
+  );
+}
+
+function Choice({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.choice, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+      <Text style={[styles.choiceText, on && { color: colors.card }]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -281,6 +318,8 @@ export function ReviewStep({ state, teams, narrow = false }: StepProps) {
 }
 
 const styles = StyleSheet.create({
+  choice: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card },
+  choiceText: { fontFamily: font.bodyBold, fontSize: 14, color: colors.ink },
   teamCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.line, padding: 12, minHeight: 68 },
   teamName: { fontFamily: font.display, fontSize: 20, color: colors.ink },
   teamMeta: { fontFamily: font.body, fontSize: 13, color: colors.muted },

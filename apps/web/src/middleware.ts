@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
 
   const { pathname } = request.nextUrl;
-  if (!data?.claims && (pathname.startsWith("/teams") || pathname.startsWith("/admin"))) {
+  if (!data?.claims && (pathname.startsWith("/teams") || pathname.startsWith("/competitions") || pathname.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

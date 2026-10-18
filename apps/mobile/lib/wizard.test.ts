@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { goToStep, initialWizard, selectTeam, startsAtOf, STEPS, toNewGameInput } from './wizard';
+import type { CompetitionTree } from '@basket-log/db';
+import { competitionsFor, goToStep, groupFor, initialWizard, selectTeam, startsAtOf, STEPS, toNewGameInput } from './wizard';
 
 describe('wizard state', () => {
   it('clamps the step to the available steps', () => {
@@ -35,5 +36,33 @@ describe('start time', () => {
     expect(startsAtOf('2026-03-14', '')).toBe(new Date('2026-03-14T12:00:00').toISOString());
     expect(startsAtOf('2026-03-14', '8pm')).toBe(new Date('2026-03-14T12:00:00').toISOString());
     expect(startsAtOf('', '20:30')).toBeUndefined();
+  });
+});
+
+describe('competitions in the wizard', () => {
+  const comp = {
+    id: 'c1',
+    name: 'Campeonato',
+    teamIds: ['h'],
+    phases: [],
+    assignments: [{ round_id: 'r1', team_id: 'h', group_id: 'g1' }],
+  } as unknown as CompetitionTree;
+
+  it('only offers competitions the home team is enrolled in', () => {
+    expect(competitionsFor([comp], 'h')).toEqual([comp]);
+    expect(competitionsFor([comp], 'x')).toEqual([]);
+    expect(competitionsFor([comp], null)).toEqual([]);
+  });
+
+  it('finds the home team group for the chosen round', () => {
+    expect(groupFor([comp], 'r1', 'h')).toBe('g1');
+    expect(groupFor([comp], 'r2', 'h')).toBeUndefined();
+    expect(groupFor([comp], null, 'h')).toBeUndefined();
+  });
+
+  it('sends the competition, round and group only when a competition is chosen', () => {
+    const base = { ...initialWizard(), teamIds: { home: 'h', away: 'a' }, roundId: 'r1' };
+    expect(toNewGameInput(base, 'g1')).not.toHaveProperty('competitionId');
+    expect(toNewGameInput({ ...base, competitionId: 'c1' }, 'g1')).toMatchObject({ competitionId: 'c1', roundId: 'r1', groupId: 'g1' });
   });
 });

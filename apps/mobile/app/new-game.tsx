@@ -1,5 +1,5 @@
 import type { GameRules } from '@basket-log/core';
-import { createGame, listRulePresets, listTeams, type TeamWithPlayers } from '@basket-log/db';
+import { createGame, listCompetitions, listRulePresets, listTeams, type CompetitionTree, type TeamWithPlayers } from '@basket-log/db';
 import { colors } from '@basket-log/ui';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, font } from '@/components/wizard/kit';
 import { LineupsStep, MatchupStep, ReviewStep, RulesStep } from '@/components/wizard/steps';
 import { supabase } from '@/lib/supabase';
-import { STEPS, canAdvance, goToStep, initialWizard, problems, toNewGameInput, type WizardState } from '@/lib/wizard';
+import { STEPS, canAdvance, goToStep, groupFor, initialWizard, problems, toNewGameInput, type WizardState } from '@/lib/wizard';
 
 const VIEWS = [MatchupStep, RulesStep, LineupsStep, ReviewStep];
 
@@ -22,6 +22,7 @@ export default function NewGameScreen() {
   const narrow = width < 700;
   const [state, setState] = useState<WizardState>(() => initialWizard());
   const [teams, setTeams] = useState<TeamWithPlayers[]>([]);
+  const [competitions, setCompetitions] = useState<CompetitionTree[]>([]);
   const [presets, setPresets] = useState<{ name: string; rules: GameRules }[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -29,9 +30,10 @@ export default function NewGameScreen() {
   const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([listTeams(supabase), listRulePresets(supabase)])
-      .then(([t, p]) => {
+    Promise.all([listTeams(supabase), listRulePresets(supabase), listCompetitions(supabase)])
+      .then(([t, p, c]) => {
         setTeams(t);
+        setCompetitions(c);
         setPresets(p);
         const fiba = p.find((x) => x.name === 'FIBA');
         if (fiba) setState((s) => ({ ...s, rules: fiba.rules }));
@@ -48,7 +50,7 @@ export default function NewGameScreen() {
     setStarting(true);
     setStartError(null);
     try {
-      const id = await createGame(supabase, { ...toNewGameInput(state), status: startNow ? 'live' : 'scheduled' });
+      const id = await createGame(supabase, { ...toNewGameInput(state, groupFor(competitions, state.roundId, state.teamIds.home)), status: startNow ? 'live' : 'scheduled' });
       if (startNow) router.replace({ pathname: '/game/[id]', params: { id } });
       else router.replace('/');
     } catch (e) {
@@ -121,7 +123,7 @@ export default function NewGameScreen() {
           ) : loadError ? (
             <Text style={styles.error}>Could not load teams: {loadError}</Text>
           ) : (
-            <View_ state={state} teams={teams} presets={presets} update={update} narrow={narrow} />
+            <View_ state={state} teams={teams} presets={presets} competitions={competitions} update={update} narrow={narrow} />
           )}
         </ScrollView>
         <View style={[styles.footer, phone && { height: 64, paddingHorizontal: Math.max(insets.left, 16), gap: 10, paddingBottom: Math.max(insets.bottom, 0) }]}>
