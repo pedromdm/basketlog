@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pedromdm.basketlog"
+      "bundleIdentifier": "pt.basketlog.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.pedromdm.basketlog"
+      "package": "pt.basketlog.app"
     },
     "web": {
       "bundler": "metro",
