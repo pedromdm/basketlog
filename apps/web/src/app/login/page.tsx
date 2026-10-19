@@ -55,6 +55,25 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function forgotPassword() {
+    if (!email) {
+      setStatus("error");
+      setMessage("Type your email first, then ask for the reset link.");
+      return;
+    }
+    setStatus("sending");
+    const { error } = await createClient().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/account`,
+    });
+    if (error) {
+      setStatus("error");
+      setMessage(error.message);
+      return;
+    }
+    setMessage("Check your inbox for the link to set a new password.");
+    setStatus("sent");
+  }
+
   const copy = {
     signin: { title: "Sign in", hint: "Use your email and password.", button: "Sign in" },
     signup: { title: "Create account", hint: "Choose a password of at least 6 characters.", button: "Create account" },
@@ -110,6 +129,11 @@ export default function LoginPage() {
         {status === "error" && <p className="mt-3 text-sm text-ink">{message}</p>}
         {status !== "error" && callbackError && <p className="mt-3 text-sm text-ink">{callbackError}</p>}
         <div className="mt-5 flex flex-col gap-2">
+          {mode === "signin" && (
+            <button type="button" className={linkCls} onClick={() => void forgotPassword()}>
+              Forgot or no password? Email me a link to set one
+            </button>
+          )}
           {mode === "signin" && (
             <button type="button" className={linkCls} onClick={() => switchTo("signup")}>
               No account? Create one

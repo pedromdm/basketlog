@@ -8,6 +8,7 @@ const NAV = [
   { href: "/teams", label: "Teams" },
   { href: "/competitions", label: "Competitions" },
   { href: "/admin", label: "Admin" },
+  { href: "/account", label: "Account" },
 ];
 
 export function SiteHeader() {

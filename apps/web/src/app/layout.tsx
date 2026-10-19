@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
 import { Suspense } from "react";
+import { AuthHashHandler } from "@/components/auth-hash-handler";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={<div className="h-16 shrink-0 bg-ink" />}>
           <SiteHeader />
         </Suspense>
+        <AuthHashHandler />
         {children}
       </body>
     </html>
