@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "efc72186-194c-4831-a96e-13949e76e388"
+      }
+    },
+    "android": {
+      "package": "com.pedromidimasteam.basketlog"
+    }
+  }
+}
