@@ -7,7 +7,7 @@ import { Button, Field, Label, font } from '@/components/wizard/kit';
 import { useAuth } from '@/lib/auth';
 
 export default function SignInScreen() {
-  const { signInWithEmailLink, signInWithPassword } = useAuth();
+  const { signInWithEmailLink, signInWithPassword, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -17,6 +17,13 @@ export default function SignInScreen() {
     setBusy(true);
     const error = await action();
     setMessage(error ?? success ?? null);
+    setBusy(false);
+  };
+
+  const create = async () => {
+    setBusy(true);
+    const { error, needsConfirmation } = await signUp(email.trim(), password);
+    setMessage(error ?? (needsConfirmation ? 'Account created. Check your email to confirm it, then sign in.' : null));
     setBusy(false);
   };
 
@@ -37,13 +44,19 @@ export default function SignInScreen() {
         />
 
         <View style={styles.divider} />
-        <Label>Or use a password (local dev account)</Label>
+        <Label>Or use a password</Label>
         <Field containerStyle={styles.field} label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
         <Button
           kind="outline"
           label="Sign in"
           disabled={busy || !email.includes('@') || !password}
           onPress={() => run(() => signInWithPassword(email.trim(), password))}
+        />
+        <Button
+          kind="outline"
+          label="Create account"
+          disabled={busy || !email.includes('@') || password.length < 6}
+          onPress={() => void create()}
         />
 
         <View style={styles.divider} />

@@ -11,12 +11,15 @@ interface AuthValue {
   /** Each sign-in returns an error message, or null on success. */
   signInWithEmailLink: (email: string) => Promise<string | null>;
   signInWithPassword: (email: string, password: string) => Promise<string | null>;
+  /** Creates the account; resolves to a message when the email must be confirmed first. */
+  signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-export const AUTH_CALLBACK = 'basketlog://auth/callback';
+// basketlog:// in a build, exp://... in Expo Go; both must be listed in the Supabase redirect URLs
+export const AUTH_CALLBACK = Linking.createURL('auth/callback');
 
 /** Magic-link redirects carry the session in the URL fragment. */
 async function sessionFromUrl(url: string): Promise<void> {
@@ -54,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: AUTH_CALLBACK } })).error?.message ?? null,
       signInWithPassword: async (email, password) =>
         (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
+      signUp: async (email, password) => {
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: AUTH_CALLBACK } });
+        return { error: error?.message ?? null, needsConfirmation: !error && !data.session };
+      },
       signOut: async () => {
         await supabase.auth.signOut();
       },
